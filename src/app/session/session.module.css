@@ -1,0 +1,42 @@
+﻿.layout {
+  min-height: 100vh;
+  background-color: var(--bg-primary);
+  display: flex;
+  flex-direction: column;
+}
+
+.main {
+  flex: 1;
+  padding: var(--space-12) 0 var(--space-20) 0;
+  display: flex;
+  align-items: center;
+}
+
+.container {
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding: 0 var(--container-padding);
+  width: 100%;
+}
+
+/* Loading */
+.loadingContainer {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-4);
+  background-color: var(--bg-primary);
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--border-default);
+  border-top-color: var(--color-primary-500);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}

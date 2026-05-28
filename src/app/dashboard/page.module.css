@@ -1,0 +1,211 @@
+.container {
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding: var(--space-6) var(--container-padding);
+}
+
+.welcomeSection {
+  background: var(--bg-card);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6) var(--space-8);
+  margin-bottom: var(--space-8);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.welcomeText {
+  flex: 1;
+  min-width: 280px;
+}
+
+.welcomeTitle {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+  margin-bottom: var(--space-1);
+}
+
+.welcomeSubtitle {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.welcomeActions {
+  display: flex;
+  gap: var(--space-3);
+}
+
+/* 통계 카드 그리드 */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-8);
+}
+
+.statCard {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), var(--bg-card));
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--transition-base), box-shadow var(--transition-base);
+}
+
+.statCard:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--border-hover);
+}
+
+.statLabel {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-1);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  position: relative;
+  width: fit-content;
+}
+
+.helpIcon {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  color: #4338ca;
+  font-size: 0.7rem;
+  font-weight: 800;
+  line-height: 1;
+  cursor: help;
+  position: relative;
+}
+
+.helpIcon::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 9px);
+  transform: translateX(-50%) translateY(4px);
+  width: max-content;
+  max-width: 240px;
+  background: #282421;
+  color: #fff;
+  border-radius: 6px;
+  padding: 0.55rem 0.7rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.45;
+  white-space: normal;
+  opacity: 0;
+  pointer-events: none;
+  box-shadow: var(--shadow-md);
+  z-index: 20;
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
+}
+
+.helpIcon:hover::after,
+.helpIcon:focus-visible::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.statValue {
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+}
+
+/* 차트 섹션 */
+.chartSection {
+  margin-bottom: var(--space-8);
+}
+
+/* 공책 섹션 */
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: var(--space-3);
+}
+
+.sectionTitle {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+}
+
+@media (max-width: 640px) {
+  .sectionHeader {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
+.notebooksGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-6);
+}
+
+.emptyState {
+  background: var(--bg-card);
+  border: 2px dashed var(--border-default);
+  border-radius: var(--radius-xl);
+  padding: var(--space-12) var(--space-6);
+  text-align: center;
+  color: var(--text-secondary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  grid-column: 1 / -1;
+}
+
+.emptyTitle {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+}
+
+.loadingWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-16) 0;
+  color: var(--text-secondary);
+  gap: var(--space-4);
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid var(--border-default);
+  border-top: 4px solid var(--color-primary-500);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

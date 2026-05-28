@@ -1,0 +1,90 @@
+.header {
+  background-color: #fdfaf6;
+  border-bottom: 1px solid #e5e0d8;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.logo {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #282421;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  line-height: 1;
+}
+
+.nav {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.navLink {
+  color: #3b332d;
+  text-decoration: none;
+  font-weight: 700;
+  border-radius: 6px;
+  padding: 0.45rem 0.25rem;
+  transition: color 0.2s;
+}
+.navLink:hover {
+  color: #8b5e3c;
+}
+
+.userMenu {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.userName {
+  font-size: 0.875rem;
+  color: #282421;
+}
+
+.logoutButton {
+  background: #fff;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: 8px;
+  color: #dc2626;
+  cursor: pointer;
+  padding: 0.5rem 0.9rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  transition: background-color 0.2s, border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+.logoutButton:hover {
+  background-color: #fee2e2;
+  border-color: rgba(220, 38, 38, 0.55);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(220, 38, 38, 0.12);
+}
+
+.loginLink {
+  color: #282421;
+  text-decoration: none;
+  font-weight: 700;
+  background-color: #fff;
+  border: 1px solid #e5e0d8;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  transition: background-color 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+.loginLink:hover {
+  background-color: #f4f0ea;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(40, 36, 33, 0.1);
+}

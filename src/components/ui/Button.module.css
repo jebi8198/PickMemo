@@ -1,0 +1,81 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  font-family: 'Inter', sans-serif;
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Variants */
+.primary {
+  background-color: #282421;
+  color: #fdfaf6;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+.primary:hover:not(:disabled) {
+  background-color: #3e3833;
+}
+
+.secondary {
+  background-color: #e5e0d8;
+  color: #282421;
+}
+.secondary:hover:not(:disabled) {
+  background-color: #d1cbc2;
+}
+
+.ghost {
+  background-color: transparent;
+  color: #282421;
+}
+.ghost:hover:not(:disabled) {
+  background-color: rgba(40, 36, 33, 0.05);
+}
+
+.danger {
+  background-color: #ef4444;
+  color: #fff;
+}
+.danger:hover:not(:disabled) {
+  background-color: #dc2626;
+}
+
+/* Sizes */
+.sm {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+}
+.md {
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+}
+.lg {
+  padding: 1rem 1.5rem;
+  font-size: 1.125rem;
+}
+
+/* Spinner */
+.spinner {
+  width: 1rem;
+  height: 1rem;
+  margin-right: 0.5rem;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

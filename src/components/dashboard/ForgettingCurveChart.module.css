@@ -1,0 +1,209 @@
+.chartWrapper {
+  background: var(--bg-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  margin-bottom: var(--space-8);
+  width: 100%;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--transition-base);
+}
+
+.chartWrapper:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.chartHeader {
+  margin-bottom: var(--space-3);
+}
+
+.chartTitle {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+  margin-bottom: var(--space-1);
+}
+
+.chartSubtitle {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.svgContainer {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 600 / 320;
+  max-height: 320px;
+}
+
+.chartSvg {
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+}
+
+/* ── 그리드 스타일 ── */
+.gridLine {
+  stroke: var(--border-subtle);
+  stroke-width: 1;
+}
+
+.criticalGridLine {
+  stroke: #2563eb;
+  stroke-dasharray: 4, 4;
+  stroke-width: 1.2;
+  opacity: 0.65;
+}
+
+.axisText {
+  fill: var(--text-tertiary);
+  font-size: 10px;
+  font-family: var(--font-family);
+  user-select: none;
+}
+
+.guideText {
+  fill: #111827;
+  font-size: 9px;
+  font-weight: var(--font-weight-bold);
+  user-select: none;
+}
+
+.reviewLabel {
+  pointer-events: none;
+}
+
+/* ── 메인 곡선 스타일 ── */
+.mainCurve {
+  stroke-linecap: round;
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  animation: drawLine 2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes drawLine {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* ── 도트 (점) 스타일 ── */
+.dotGroup {
+  transition: all var(--transition-fast);
+  cursor: pointer;
+}
+
+.dotCore {
+  transition: r var(--transition-fast), fill var(--transition-fast);
+}
+
+.dotGlow {
+  transition: r var(--transition-fast), opacity var(--transition-fast);
+  opacity: 0.25;
+}
+
+.dotGroup:hover .dotCore {
+  r: 7px;
+}
+
+.dotGroup:hover .dotGlow {
+  r: 12px;
+  opacity: 0.6;
+}
+
+/* 툴팁에 사용될 스타일들 */
+.safe {
+  fill: var(--color-success);
+  color: var(--color-success) !important;
+}
+
+.warning {
+  fill: var(--color-warning);
+  color: var(--color-warning) !important;
+}
+
+.danger {
+  fill: var(--color-danger);
+  color: var(--color-danger) !important;
+}
+
+.tooltip {
+  position: absolute;
+  background: var(--bg-glass-strong);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  pointer-events: none;
+  z-index: 10;
+  box-shadow: var(--shadow-md);
+  transform: translate(-50%, -100%);
+  animation: fadeIn var(--transition-fast) ease-out;
+  min-width: 180px;
+}
+
+.tooltipTopic {
+  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  margin-bottom: var(--space-2);
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: var(--space-1);
+}
+
+.tooltipGrid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-1) var(--space-3);
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  align-items: center;
+}
+
+.tooltipStatusText {
+  margin-top: var(--space-2);
+  font-size: 10px;
+  font-weight: var(--font-weight-medium);
+  border-top: 1px dashed var(--border-subtle);
+  padding-top: 6px;
+}
+
+/* ── 범례 (Legend) ── */
+.legend {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-6);
+  margin-top: var(--space-4);
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  border-top: 1px solid var(--border-subtle);
+  padding-top: var(--space-4);
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.legendColor {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-full);
+}
+
+.safeColor {
+  background-color: var(--color-success);
+  box-shadow: 0 0 6px var(--color-success);
+}
+
+.warningColor {
+  background-color: var(--color-warning);
+  box-shadow: 0 0 6px var(--color-warning);
+}
+
+.dangerColor {
+  background-color: var(--color-danger);
+  box-shadow: 0 0 6px var(--color-danger);
+}

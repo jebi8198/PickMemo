@@ -1,0 +1,58 @@
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(40, 36, 33, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  backdrop-filter: blur(2px);
+}
+
+.modal {
+  background-color: #fdfaf6;
+  border-radius: 12px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  border: 1px solid #e5e0d8;
+}
+
+.header {
+  padding: 1.5rem;
+  border-bottom: 1px solid #e5e0d8;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #282421;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #666;
+  transition: color 0.2s;
+  padding: 0;
+  line-height: 1;
+}
+.closeButton:hover {
+  color: #282421;
+}
+
+.content {
+  padding: 1.5rem;
+}

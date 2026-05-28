@@ -1,0 +1,95 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  padding: 0.25rem;
+  border-radius: 8px;
+  background-color: #f4f0ea;
+  border: 1px solid #e5e0d8;
+}
+
+.tab {
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #6b6259;
+  font-size: 0.875rem;
+  font-weight: 600;
+  padding: 0.625rem 0.75rem;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.activeTab {
+  background-color: #fff;
+  color: #282421;
+  box-shadow: 0 1px 3px rgba(40, 36, 33, 0.12);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #282421;
+}
+
+.textarea {
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 1px solid #d1cbc2;
+  background-color: #fff;
+  color: #282421;
+  font-size: 1rem;
+  font-family: 'Inter', sans-serif;
+  resize: vertical;
+}
+
+.textarea:focus {
+  outline: none;
+  border-color: #282421;
+  box-shadow: 0 0 0 2px rgba(40, 36, 33, 0.1);
+}
+
+.jsonTextarea {
+  font-family: Consolas, 'Courier New', monospace;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.preview {
+  border: 1px solid #e5e0d8;
+  border-radius: 8px;
+  background-color: #fdfaf6;
+  padding: 0.75rem;
+}
+
+.previewImage {
+  width: 100%;
+  max-height: 180px;
+  object-fit: contain;
+  border-radius: 6px;
+  display: block;
+}
+
+.previewError,
+.error {
+  margin: 0;
+  color: #b91c1c;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.submitBtn {
+  margin-top: 1rem;
+}

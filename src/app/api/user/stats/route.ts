@@ -1,0 +1,43 @@
+import { NextResponse } from 'next/server';
+import { auth } from '@/lib/auth';
+import dbConnect from '@/lib/mongodb';
+import Notebook from '@/models/Notebook';
+import Page from '@/models/Page';
+import { getErrorMessage } from '@/lib/api';
+
+export async function GET() {
+  try {
+    const session = await auth();
+    if (!session || !session.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    await dbConnect();
+    const userId = session.user.id;
+
+    const totalNotebooks = await Notebook.countDocuments({ userId });
+    const totalPages = await Page.countDocuments({ userId });
+    const totalReviewed = await Page.countDocuments({ userId, reviewCount: { $gt: 0 } });
+    
+    const now = new Date();
+    const reviewDueToday = await Page.countDocuments({ userId, nextReviewDate: { $lte: now } });
+
+    const pages = await Page.find({ userId, reviewCount: { $gt: 0 } }).select('difficultyWeight');
+    const averageDifficulty = pages.length > 0
+      ? pages.reduce((acc, p) => acc + p.difficultyWeight, 0) / pages.length
+      : 0;
+
+    const allPages = await Page.find({ userId }).select('_id topic lastReviewedAt nextReviewDate intervalDays createdAt difficultyWeight reviewCount');
+
+    return NextResponse.json({
+      totalNotebooks,
+      totalPages,
+      totalReviewed,
+      reviewDueToday,
+      averageDifficulty: Math.round(averageDifficulty * 100) / 100,
+      pages: allPages
+    }, { status: 200 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
+  }
+}

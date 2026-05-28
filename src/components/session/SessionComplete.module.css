@@ -1,0 +1,73 @@
+.container {
+  max-width: 500px;
+  margin: 4rem auto;
+  text-align: center;
+  background-color: #fff;
+  padding: 3rem 2rem;
+  border-radius: 16px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e0d8;
+}
+
+.icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(-5%); }
+  50% { transform: translateY(5%); }
+}
+
+.title {
+  font-size: 2rem;
+  color: #282421;
+  margin: 0 0 0.5rem 0;
+}
+
+.subtitle {
+  color: #666;
+  margin: 0 0 2rem 0;
+}
+
+.stats {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-bottom: 2.5rem;
+}
+
+.statBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background-color: #f4f0ea;
+  padding: 1rem;
+  border-radius: 12px;
+  min-width: 100px;
+}
+
+.statLabel {
+  font-size: 0.875rem;
+  color: #666;
+  margin-bottom: 0.5rem;
+}
+
+.statValue {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #282421;
+}
+
+.actions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+@media (max-width: 640px) {
+  .actions {
+    flex-direction: column;
+  }
+}

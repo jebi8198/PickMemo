@@ -1,0 +1,76 @@
+.container {
+  max-width: 500px;
+  margin: 0 auto;
+  background-color: #fff;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e0d8;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #282421;
+  text-align: center;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.label {
+  font-weight: 500;
+  color: #282421;
+  font-size: 0.875rem;
+}
+
+.select {
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 1px solid #d1cbc2;
+  font-family: 'Inter', sans-serif;
+  font-size: 1rem;
+  color: #282421;
+  background-color: #fff;
+}
+
+.limitOptions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.limitBtn {
+  flex: 1;
+  padding: 0.5rem;
+  background-color: #f4f0ea;
+  border: 1px solid #d1cbc2;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: #282421;
+}
+
+.limitBtnActive {
+  background-color: #282421;
+  color: #fdfaf6;
+  border-color: #282421;
+}
+
+.preview {
+  background-color: #f4f0ea;
+  padding: 1rem;
+  border-radius: 8px;
+  text-align: center;
+  color: #666;
+  font-size: 0.875rem;
+}
+
+.startBtn {
+  margin-top: 1rem;
+}

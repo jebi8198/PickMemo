@@ -1,0 +1,138 @@
+.scene {
+  width: 100%;
+  max-width: 600px;
+  height: 400px;
+  perspective: 1000px;
+  margin: 0 auto;
+  cursor: pointer;
+}
+
+.card {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+}
+
+.face {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  border-radius: 16px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  background-color: #fff;
+  border: 1px solid #e5e0d8;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.front {
+  background: linear-gradient(135deg, #fdfaf6 0%, #f4f0ea 100%);
+}
+
+.back {
+  transform: rotateY(180deg);
+  background-color: #fff;
+  cursor: default;
+}
+
+.content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  text-align: center;
+  position: relative;
+}
+
+.hint {
+  position: absolute;
+  left: 2rem;
+  right: 2rem;
+  bottom: 2rem;
+  font-size: 0.875rem;
+  color: #8b5e3c;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  opacity: 0.8;
+}
+
+.topicFront {
+  font-size: 2rem;
+  color: #282421;
+  margin: 0;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.contentBack {
+  flex: 1;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.topicBack {
+  font-size: 1.5rem;
+  color: #282421;
+  margin: 0;
+  font-weight: 700;
+}
+
+.divider {
+  height: 2px;
+  background-color: #e5e0d8;
+  margin: 1rem 0;
+  width: 100%;
+}
+
+.description {
+  color: #282421;
+  font-size: 1.125rem;
+  line-height: 1.6;
+  flex: 1;
+}
+.description p {
+  margin-top: 0;
+  margin-bottom: 1rem;
+}
+
+.imageWrapper {
+  margin: 1rem 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: #f4f0ea;
+  display: flex;
+  justify-content: center;
+}
+.image {
+  max-width: 100%;
+  max-height: 200px;
+  object-fit: contain;
+}
+
+.imageError {
+  margin: 1rem 0 0;
+  color: #b91c1c;
+  font-size: 0.875rem;
+}
+
+.keywords {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+}
+
+.keyword {
+  font-size: 0.875rem;
+  color: #666;
+  background-color: #f4f0ea;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+}
