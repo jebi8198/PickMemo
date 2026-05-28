@@ -17,7 +17,7 @@
 
 .label {
   font-size: 0.875rem;
-  font-weight: 500;
+  font-weight: 600;
   color: #282421;
 }
 
@@ -32,26 +32,44 @@
   resize: vertical;
 }
 
+.textarea::placeholder {
+  color: #8a8178;
+  opacity: 0.8;
+}
+
 .textarea:focus {
   outline: none;
   border-color: #282421;
   box-shadow: 0 0 0 2px rgba(40, 36, 33, 0.1);
 }
 
-.colorPicker {
+.colorGrid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.6rem;
+  padding: 0.25rem 0;
+}
+
+.colorChip {
   width: 100%;
-  height: 40px;
-  padding: 0;
-  border: 1px solid #d1cbc2;
-  border-radius: 8px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 2px solid transparent;
   cursor: pointer;
+  box-shadow: 0 2px 4px rgba(40, 36, 33, 0.15);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
 }
-.colorPicker::-webkit-color-swatch-wrapper {
-  padding: 0;
+
+.colorChip:hover {
+  transform: scale(1.12);
+  box-shadow: 0 4px 8px rgba(40, 36, 33, 0.25);
 }
-.colorPicker::-webkit-color-swatch {
-  border: none;
-  border-radius: 8px;
+
+.activeChip {
+  transform: scale(1.08);
+  border-color: #282421;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-color, #8b5e3c) 30%, transparent), 0 4px 8px rgba(40, 36, 33, 0.25);
 }
 
 .submitBtn {

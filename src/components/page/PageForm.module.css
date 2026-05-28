@@ -18,7 +18,7 @@
   border: none;
   border-radius: 6px;
   background: transparent;
-  color: #6b6259;
+  color: #5e544b;
   font-size: 0.875rem;
   font-weight: 600;
   padding: 0.625rem 0.75rem;
@@ -28,7 +28,7 @@
 
 .activeTab {
   background-color: #fff;
-  color: #282421;
+  color: #1a1715;
   box-shadow: 0 1px 3px rgba(40, 36, 33, 0.12);
 }
 
@@ -40,7 +40,7 @@
 
 .label {
   font-size: 0.875rem;
-  font-weight: 500;
+  font-weight: 600;
   color: #282421;
 }
 
@@ -53,6 +53,11 @@
   font-size: 1rem;
   font-family: 'Inter', sans-serif;
   resize: vertical;
+}
+
+.textarea::placeholder {
+  color: #8a8178;
+  opacity: 0.8;
 }
 
 .textarea:focus {

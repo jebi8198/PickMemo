@@ -23,7 +23,7 @@ export const NotebookCard: React.FC<NotebookCardProps> = ({
   onStartSession,
 }) => {
   const router = useRouter();
-  const displayColor = color === '#6366f1' ? '#a57a57' : color;
+  const displayColor = color === '#6366f1' ? '#8b5e3c' : color;
 
   const handleCardClick = () => {
     router.push(`/notebooks/${id}`);

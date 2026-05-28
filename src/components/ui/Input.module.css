@@ -7,7 +7,7 @@
 
 .label {
   font-size: 0.875rem;
-  font-weight: 500;
+  font-weight: 600;
   color: #282421;
 }
 
@@ -20,6 +20,11 @@
   font-size: 1rem;
   font-family: 'Inter', sans-serif;
   transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.input::placeholder {
+  color: #8a8178;
+  opacity: 0.8;
 }
 
 .input:focus {

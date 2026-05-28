@@ -22,7 +22,7 @@
   min-height: 220px;
   border-radius: 10px 14px 14px 10px;
   background:
-    linear-gradient(135deg, color-mix(in srgb, var(--accent-color) 65%, #fdf8f2) 0%, color-mix(in srgb, var(--accent-color) 80%, #b88655) 100%);
+    linear-gradient(135deg, color-mix(in srgb, var(--accent-color) 70%, #fff) 0%, color-mix(in srgb, var(--accent-color) 75%, #000) 100%);
   border: 1px solid rgba(40, 36, 33, 0.15);
   overflow: hidden;
   display: flex;
