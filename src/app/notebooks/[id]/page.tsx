@@ -230,17 +230,17 @@ export default function NotebookDetailPage() {
           </div>
 
           <div className={styles.actions}>
-            <Button variant="primary" onClick={() => setActiveModal('session')} disabled={pages.length === 0}>
-              🎯 학습하기
-            </Button>
-            <Button variant="secondary" onClick={() => setActiveModal('addPage')}>
-              ➕ 페이지 추가
-            </Button>
             <Button variant="ghost" onClick={() => setActiveModal('editNotebook')}>
               ✏️ 편집
             </Button>
             <Button variant="danger" onClick={handleDeleteNotebook} loading={isDeleting}>
               🗑️ 삭제
+            </Button>
+            <Button variant="secondary" onClick={() => setActiveModal('addPage')}>
+              ➕ 페이지 추가
+            </Button>
+            <Button variant="primary" onClick={() => setActiveModal('session')} disabled={pages.length === 0}>
+              🎯 학습하기
             </Button>
           </div>
         </div>
