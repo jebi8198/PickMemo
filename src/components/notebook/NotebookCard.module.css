@@ -2,18 +2,16 @@
   text-decoration: none;
   display: block;
   cursor: pointer;
-  perspective: 1200px;
 }
 
 .card3D {
   position: relative;
   width: 100%;
-  transform-style: preserve-3d;
-  transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  transition: transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 .cardWrapper:hover .card3D {
-  transform: rotateY(-12deg) rotateX(4deg) translateZ(15px) translateY(-6px);
+  transform: translateY(-5px);
 }
 
 .card {
@@ -31,25 +29,25 @@
   box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.2);
 }
 
-/* 3D 책장 밑면 그림자 효과 */
+/* 2D 플로팅에 적합한 책장 밑면 그림자 효과 */
 .shadow {
   position: absolute;
-  inset: 5% 0 0 5%;
-  width: 90%;
-  height: 95%;
-  background: rgba(40, 36, 33, 0.16);
-  filter: blur(12px);
-  border-radius: 14px;
-  transform: translateZ(-20px) translateY(8px);
-  transition: transform 0.3s ease, filter 0.3s ease, opacity 0.3s ease;
+  inset: 3% 2% 0 2%;
+  width: 96%;
+  height: 97%;
+  background: rgba(40, 36, 33, 0.12);
+  filter: blur(8px);
+  border-radius: 12px;
+  transform: translateY(4px);
+  transition: transform 0.25s ease, filter 0.25s ease, opacity 0.25s ease;
   z-index: 1;
   pointer-events: none;
 }
 
 .cardWrapper:hover .shadow {
-  transform: translateZ(-35px) translateY(18px) scale(0.96);
-  filter: blur(18px);
-  opacity: 0.85;
+  transform: translateY(10px) scale(0.98);
+  filter: blur(12px);
+  opacity: 0.8;
 }
 
 .spine {
