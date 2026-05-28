@@ -4,53 +4,82 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(40, 36, 33, 0.4);
+  background-color: rgba(40, 36, 33, 0.45);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 50;
-  backdrop-filter: blur(2px);
+  z-index: var(--z-modal, 400);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  animation: overlayIn 0.2s ease-out;
+}
+
+@keyframes overlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 .modal {
-  background-color: #fdfaf6;
-  border-radius: 12px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  background-color: var(--bg-card, #fdfaf6);
+  border-radius: var(--radius-xl, 12px);
+  box-shadow: 0 24px 40px -8px rgba(40, 36, 33, 0.18), 0 8px 16px -4px rgba(40, 36, 33, 0.08);
   width: 90%;
-  max-width: 500px;
+  max-width: 520px;
   max-height: 90vh;
   overflow-y: auto;
   position: relative;
-  border: 1px solid #e5e0d8;
+  border: 1px solid var(--border-default, #e5e0d8);
+  animation: modalIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.94) translateY(12px); }
+  to   { opacity: 1; transform: scale(1)   translateY(0); }
+}
+
+/* ── 크기 변형 ── */
+.sm { max-width: 380px; }
+.md { max-width: 520px; }
+.lg { max-width: 720px; }
+
 .header {
-  padding: 1.5rem;
-  border-bottom: 1px solid #e5e0d8;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--border-subtle, #e5e0d8);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  position: sticky;
+  top: 0;
+  background: var(--bg-card, #fdfaf6);
+  z-index: 1;
 }
 
 .title {
   margin: 0;
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #282421;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--text-primary, #282421);
 }
 
 .closeButton {
   background: none;
   border: none;
-  font-size: 1.5rem;
+  font-size: 1.4rem;
   cursor: pointer;
-  color: #666;
-  transition: color 0.2s;
+  color: var(--text-tertiary, #888);
+  transition: color 0.15s;
   padding: 0;
   line-height: 1;
+  border-radius: 50%;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .closeButton:hover {
-  color: #282421;
+  color: var(--text-primary, #282421);
+  background: var(--bg-tertiary, #ece7df);
 }
 
 .content {

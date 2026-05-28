@@ -1,21 +1,26 @@
 'use client';
+
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { PageCard } from '@/components/page/PageCard';
 import { PageForm, PageFormData } from '@/components/page/PageForm';
+import { NotebookForm } from '@/components/notebook/NotebookForm';
+import { SessionSetup } from '@/components/session/SessionSetup';
 import { Header } from '@/components/layout/Header';
-import Link from 'next/link';
 import styles from './page.module.css';
 
 type PageStatus = 'new' | 'learning' | 'review' | 'graduated';
+type ActiveModal = 'addPage' | 'editNotebook' | 'session' | null;
 
 interface NotebookDetail {
   _id: string;
   title: string;
   description?: string;
   color: string;
+  pageCount: number;
+  reviewDueCount: number;
 }
 
 interface PageItem {
@@ -35,11 +40,12 @@ export default function NotebookDetailPage() {
     return Array.isArray(id) ? id[0] : id;
   }, [params.id]);
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [activeModal, setActiveModal] = useState<ActiveModal>(null);
   const [notebook, setNotebook] = useState<NotebookDetail | null>(null);
   const [pages, setPages] = useState<PageItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (!notebookId) return;
@@ -82,9 +88,9 @@ export default function NotebookDetailPage() {
     return 'learning';
   };
 
+  // ── 페이지 추가 ──
   const handleCreatePage = async (data: PageFormData) => {
     if (!notebookId) return;
-
     try {
       setIsSubmitting(true);
       const res = await fetch(`/api/notebooks/${notebookId}/pages`, {
@@ -92,14 +98,10 @@ export default function NotebookDetailPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
-
-      if (!res.ok) {
-        throw new Error('페이지를 생성하지 못했습니다.');
-      }
-
+      if (!res.ok) throw new Error('페이지를 생성하지 못했습니다.');
       const result = (await res.json()) as { page: PageItem };
       setPages((current) => [result.page, ...current]);
-      setIsModalOpen(false);
+      setActiveModal(null);
     } catch (error) {
       console.error('Failed to create page:', error);
     } finally {
@@ -109,7 +111,6 @@ export default function NotebookDetailPage() {
 
   const handleCreatePages = async (items: PageFormData[]) => {
     if (!notebookId) return;
-
     try {
       setIsSubmitting(true);
       const res = await fetch(`/api/notebooks/${notebookId}/pages`, {
@@ -117,14 +118,10 @@ export default function NotebookDetailPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pages: items }),
       });
-
-      if (!res.ok) {
-        throw new Error('페이지를 일괄 생성하지 못했습니다.');
-      }
-
+      if (!res.ok) throw new Error('페이지를 일괄 생성하지 못했습니다.');
       const result = (await res.json()) as { pages: PageItem[] };
       setPages((current) => [...result.pages, ...current]);
-      setIsModalOpen(false);
+      setActiveModal(null);
     } catch (error) {
       console.error('Failed to create pages:', error);
     } finally {
@@ -132,27 +129,74 @@ export default function NotebookDetailPage() {
     }
   };
 
-
+  // ── 페이지 삭제 ──
   const handleDeletePage = async (pageId: string) => {
-    const confirmed = window.confirm('이 페이지를 삭제하시겠습니까?');
-    if (!confirmed) return;
-
+    if (!window.confirm('이 페이지를 삭제하시겠습니까?')) return;
     try {
       const res = await fetch(`/api/pages/${pageId}`, { method: 'DELETE' });
-      if (!res.ok) {
-        throw new Error('페이지를 삭제하지 못했습니다.');
-      }
+      if (!res.ok) throw new Error('페이지를 삭제하지 못했습니다.');
       setPages((current) => current.filter((page) => page._id !== pageId));
     } catch (error) {
       console.error('Failed to delete page:', error);
     }
   };
 
+  // ── 공책 편집 ──
+  const handleEditNotebook = async (data: { title: string; description: string; color: string }) => {
+    if (!notebookId) return;
+    try {
+      setIsSubmitting(true);
+      const res = await fetch(`/api/notebooks/${notebookId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error('공책을 수정하지 못했습니다.');
+      const result = (await res.json()) as { notebook: NotebookDetail };
+      setNotebook(result.notebook);
+      setActiveModal(null);
+    } catch (error) {
+      console.error('Failed to update notebook:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // ── 공책 삭제 ──
+  const handleDeleteNotebook = async () => {
+    if (!notebookId) return;
+    if (!window.confirm(`'${notebook?.title}' 공책을 삭제하시겠습니까?\n이 공책의 모든 페이지도 함께 삭제됩니다.`)) return;
+    try {
+      setIsDeleting(true);
+      const res = await fetch(`/api/notebooks/${notebookId}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('공책을 삭제하지 못했습니다.');
+      router.push('/dashboard');
+    } catch (error) {
+      console.error('Failed to delete notebook:', error);
+      setIsDeleting(false);
+    }
+  };
+
+  // ── 학습 시작 ──
+  const handleSessionStart = (nbId: string, count: number) => {
+    setActiveModal(null);
+    router.push(`/session/play?notebookId=${nbId}&count=${count}`);
+  };
+
+  const notebookOption = notebook
+    ? [{ id: notebook._id, title: notebook.title, reviewCount: notebook.reviewDueCount ?? pages.length }]
+    : [];
+
   if (isLoading) {
     return (
       <>
         <Header />
-        <div className={styles.container}>공책을 불러오는 중...</div>
+        <div className={styles.container}>
+          <div className={styles.loadingWrapper}>
+            <div className={styles.spinner} />
+            <p>공책을 불러오는 중...</p>
+          </div>
+        </div>
       </>
     );
   }
@@ -170,36 +214,103 @@ export default function NotebookDetailPage() {
     <>
       <Header />
       <div className={styles.container}>
+        {/* ── 공책 헤더 ── */}
         <div className={styles.header}>
           <div className={styles.titleInfo}>
             <div className={styles.colorBadge} style={{ backgroundColor: notebook.color }} />
             <div>
               <h1 className={styles.title}>{notebook.title}</h1>
-              <p className={styles.description}>{notebook.description}</p>
+              {notebook.description && (
+                <p className={styles.description}>{notebook.description}</p>
+              )}
+              <p className={styles.meta}>
+                총 {pages.length}장 · 복습 대기 {notebook.reviewDueCount ?? 0}장
+              </p>
             </div>
           </div>
+
           <div className={styles.actions}>
-            <Link href={`/session?notebookId=${notebook._id}`}>
-              <Button variant="primary">학습하기</Button>
-            </Link>
-            <Button variant="secondary" onClick={() => setIsModalOpen(true)}>새 페이지 추가</Button>
+            <Button variant="primary" onClick={() => setActiveModal('session')} disabled={pages.length === 0}>
+              🎯 학습하기
+            </Button>
+            <Button variant="secondary" onClick={() => setActiveModal('addPage')}>
+              ➕ 페이지 추가
+            </Button>
+            <Button variant="ghost" onClick={() => setActiveModal('editNotebook')}>
+              ✏️ 편집
+            </Button>
+            <Button variant="danger" onClick={handleDeleteNotebook} loading={isDeleting}>
+              🗑️ 삭제
+            </Button>
           </div>
         </div>
 
-        <div className={styles.grid}>
-          {pages.map(page => (
-            <PageCard 
-              key={page._id}
-              topic={page.topic} 
-              keywords={page.keywords} 
-              status={getPageStatus(page)}
-              onDelete={() => handleDeletePage(page._id)}
-            />
-          ))}
-        </div>
+        {/* ── 페이지 그리드 ── */}
+        {pages.length === 0 ? (
+          <div className={styles.emptyState}>
+            <span style={{ fontSize: '3rem' }}>📄</span>
+            <p>아직 페이지가 없습니다. 첫 번째 학습 카드를 추가해 보세요!</p>
+            <Button variant="primary" onClick={() => setActiveModal('addPage')}>
+              첫 페이지 추가하기
+            </Button>
+          </div>
+        ) : (
+          <div className={styles.grid}>
+            {pages.map((page) => (
+              <PageCard
+                key={page._id}
+                topic={page.topic}
+                keywords={page.keywords}
+                status={getPageStatus(page)}
+                onDelete={() => handleDeletePage(page._id)}
+              />
+            ))}
+          </div>
+        )}
 
-        <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="새 페이지 추가">
-          <PageForm onSubmit={handleCreatePage} onSubmitMany={handleCreatePages} isLoading={isSubmitting} />
+        {/* ── 새 페이지 추가 모달 ── */}
+        <Modal
+          isOpen={activeModal === 'addPage'}
+          onClose={() => setActiveModal(null)}
+          title="새 페이지 추가"
+          size="lg"
+        >
+          <PageForm
+            onSubmit={handleCreatePage}
+            onSubmitMany={handleCreatePages}
+            isLoading={isSubmitting}
+          />
+        </Modal>
+
+        {/* ── 공책 편집 모달 ── */}
+        <Modal
+          isOpen={activeModal === 'editNotebook'}
+          onClose={() => setActiveModal(null)}
+          title="공책 편집"
+        >
+          <NotebookForm
+            initialData={{
+              title: notebook.title,
+              description: notebook.description ?? '',
+              color: notebook.color,
+            }}
+            onSubmit={handleEditNotebook}
+            isLoading={isSubmitting}
+          />
+        </Modal>
+
+        {/* ── 학습 시작 모달 ── */}
+        <Modal
+          isOpen={activeModal === 'session'}
+          onClose={() => setActiveModal(null)}
+          title="학습 설정"
+          size="lg"
+        >
+          <SessionSetup
+            notebooks={notebookOption}
+            initialNotebookId={notebook._id}
+            onStart={handleSessionStart}
+          />
         </Modal>
       </div>
     </>

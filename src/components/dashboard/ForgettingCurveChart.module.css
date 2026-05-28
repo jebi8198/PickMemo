@@ -113,6 +113,16 @@
   opacity: 0.6;
 }
 
+.groupCount {
+  fill: var(--text-primary);
+  font-size: 10px;
+  font-weight: 800;
+  paint-order: stroke;
+  stroke: rgba(255, 255, 255, 0.85);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+
 /* 툴팁에 사용될 스타일들 */
 .safe {
   fill: var(--color-success);
@@ -167,6 +177,13 @@
   font-weight: var(--font-weight-medium);
   border-top: 1px dashed var(--border-subtle);
   padding-top: 6px;
+}
+
+.tooltipTopics {
+  margin-top: var(--space-2);
+  color: var(--text-tertiary);
+  font-size: 10px;
+  line-height: 1.45;
 }
 
 /* ── 범례 (Legend) ── */

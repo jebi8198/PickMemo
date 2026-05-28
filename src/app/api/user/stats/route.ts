@@ -27,7 +27,32 @@ export async function GET() {
       ? pages.reduce((acc, p) => acc + p.difficultyWeight, 0) / pages.length
       : 0;
 
-    const allPages = await Page.find({ userId }).select('_id topic lastReviewedAt nextReviewDate intervalDays createdAt difficultyWeight reviewCount');
+    const allPages = await Page.find({ userId })
+      .select('_id notebookId topic lastReviewedAt nextReviewDate intervalDays createdAt difficultyWeight reviewCount')
+      .lean();
+
+    const notebookIds = Array.from(
+      new Set(
+        allPages
+          .map((page) => page.notebookId?.toString())
+          .filter((id): id is string => Boolean(id))
+      )
+    );
+    const notebooks = await Notebook.find({ userId, _id: { $in: notebookIds } })
+      .select('_id title')
+      .lean();
+    const notebookTitleMap = new Map(
+      notebooks.map((notebook) => [notebook._id.toString(), notebook.title])
+    );
+    const chartPages = allPages.map((page) => {
+      const notebookId = page.notebookId?.toString();
+      return {
+        ...page,
+        _id: page._id.toString(),
+        notebookId,
+        notebookTitle: notebookId ? notebookTitleMap.get(notebookId) : undefined,
+      };
+    });
 
     return NextResponse.json({
       totalNotebooks,
@@ -35,7 +60,7 @@ export async function GET() {
       totalReviewed,
       reviewDueToday,
       averageDifficulty: Math.round(averageDifficulty * 100) / 100,
-      pages: allPages
+      pages: chartPages
     }, { status: 200 });
   } catch (error: unknown) {
     return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });

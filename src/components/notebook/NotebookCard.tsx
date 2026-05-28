@@ -19,11 +19,12 @@ export const NotebookCard: React.FC<NotebookCardProps> = ({
   color,
   reviewCount = 0,
 }) => {
-  const displayColor = color === '#6366f1' ? '#8b5e3c' : color;
+  const displayColor = color === '#6366f1' ? '#a57a57' : color;
 
   return (
     <Link href={`/notebooks/${id}`} className={styles.cardWrapper}>
       <div className={styles.card} style={{ '--accent-color': displayColor } as React.CSSProperties}>
+        <div className={styles.spine} />
         <div className={styles.topAccent} />
         <div className={styles.content}>
           <div className={styles.headerRow}>

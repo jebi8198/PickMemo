@@ -1,53 +1,118 @@
 .container {
-  max-width: 1200px;
+  max-width: var(--container-max);
   margin: 0 auto;
-  padding: 2rem 1rem;
+  padding: var(--space-6) var(--container-padding);
 }
 
+/* ── 헤더 카드 ── */
 .header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 3rem;
-  background-color: #fff;
-  padding: 2rem;
-  border-radius: 16px;
-  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-  border: 1px solid #e5e0d8;
+  margin-bottom: var(--space-8);
+  background: var(--bg-card);
+  padding: var(--space-6) var(--space-8);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-default);
   flex-wrap: wrap;
-  gap: 1rem;
+  gap: var(--space-4);
 }
 
 .titleInfo {
   display: flex;
-  gap: 1.5rem;
+  gap: var(--space-5);
+  align-items: flex-start;
+  flex: 1;
+  min-width: 200px;
 }
 
 .colorBadge {
-  width: 16px;
-  height: auto;
-  min-height: 100%;
-  border-radius: 4px;
+  width: 6px;
+  min-height: 60px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+  margin-top: 4px;
 }
 
 .title {
-  font-size: 2rem;
-  color: #282421;
-  margin: 0 0 0.5rem 0;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+  margin: 0 0 var(--space-1) 0;
 }
 
 .description {
-  color: #666;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin: 0 0 var(--space-2) 0;
+}
+
+.meta {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
   margin: 0;
 }
 
+/* ── 액션 버튼 그룹 ── */
 .actions {
   display: flex;
-  gap: 1rem;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  align-items: center;
 }
 
+/* ── 페이지 카드 그리드 ── */
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-5);
+}
+
+/* ── 빈 상태 ── */
+.emptyState {
+  background: var(--bg-card);
+  border: 2px dashed var(--border-default);
+  border-radius: var(--radius-xl);
+  padding: var(--space-16) var(--space-6);
+  text-align: center;
+  color: var(--text-secondary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+/* ── 로딩 ── */
+.loadingWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-16) 0;
+  color: var(--text-secondary);
+  gap: var(--space-4);
+}
+
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--border-default);
+  border-top: 3px solid var(--color-primary-500);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 640px) {
+  .header {
+    flex-direction: column;
+    padding: var(--space-4);
+  }
+  .actions {
+    width: 100%;
+  }
 }
