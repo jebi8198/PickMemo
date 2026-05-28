@@ -143,7 +143,7 @@ export default function DashboardPage() {
       <div className={styles.welcomeSection}>
         <div className={styles.welcomeText}>
           <h1 className={styles.welcomeTitle}>
-            🧠 안녕하세요, {session?.user?.name || '학습자'}님!
+            안녕하세요, {session?.user?.name || '학습자'}님!
           </h1>
           <p className={styles.welcomeSubtitle}>
             {reviewDueCount > 0
@@ -162,7 +162,7 @@ export default function DashboardPage() {
           >
             🎯 전체 복습 시작
           </Button>
-          <Button variant="secondary" onClick={() => setActiveModal('newNotebook')}>
+          <Button variant="secondary" className={styles.createBtn} onClick={() => setActiveModal('newNotebook')}>
             ➕ 새 공책 만들기
           </Button>
         </div>
@@ -171,19 +171,31 @@ export default function DashboardPage() {
       {/* ── 통계 그리드 ── */}
       <div className={styles.statsGrid}>
         <div className={styles.statCard}>
-          <span className={styles.statLabel}>📚 총 공책</span>
+          <span className={styles.statLabel}>
+            📚 총 공책
+            <span className={styles.helpIcon} data-tooltip="생성한 학습 공책의 총 개수입니다.">?</span>
+          </span>
           <span className={styles.statValue}>{stats?.totalNotebooks ?? notebooks.length}개</span>
         </div>
         <div className={styles.statCard}>
-          <span className={styles.statLabel}>📑 총 학습 카드</span>
+          <span className={styles.statLabel}>
+            📑 총 학습 카드
+            <span className={styles.helpIcon} data-tooltip="모든 공책에 들어있는 총 개념 카드의 수입니다.">?</span>
+          </span>
           <span className={styles.statValue}>{stats?.totalPages ?? 0}장</span>
         </div>
         <div className={styles.statCard}>
-          <span className={styles.statLabel}>🔄 복습 완료 카드</span>
+          <span className={styles.statLabel}>
+            🔄 복습 완료 카드
+            <span className={styles.helpIcon} data-tooltip="복습을 최소 1회 이상 진행한 카드의 수입니다.">?</span>
+          </span>
           <span className={styles.statValue}>{stats?.totalReviewed ?? 0}장</span>
         </div>
         <div className={styles.statCard}>
-          <span className={styles.statLabel}>🔥 평균 난이도 가중치</span>
+          <span className={styles.statLabel}>
+            🔥 평균 난이도 가중치
+            <span className={styles.helpIcon} data-tooltip="AGAIN/HARD 선택이 많을수록 올라가는 지식 난이도 지수입니다.">?</span>
+          </span>
           <span className={styles.statValue}>
             {stats?.averageDifficulty ? `${stats.averageDifficulty.toFixed(2)}x` : '1.00x'}
           </span>
@@ -201,6 +213,14 @@ export default function DashboardPage() {
       <section>
         <div className={styles.sectionHeader}>
           <h2 className={styles.sectionTitle}>📓 내 공책 목록</h2>
+          <Button 
+            variant="secondary" 
+            size="sm" 
+            className={styles.createBtn}
+            onClick={() => setActiveModal('newNotebook')}
+          >
+            ➕ 새 공책 만들기
+          </Button>
         </div>
         <div className={styles.notebooksGrid}>
           {notebooks.length > 0 ? (

@@ -86,14 +86,21 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: #eef2ff;
-  border: 1px solid #c7d2fe;
-  color: #4338ca;
+  background: #f4f0ea;
+  border: 1px solid #d1cbc2;
+  color: #8b5e3c;
   font-size: 0.7rem;
   font-weight: 800;
   line-height: 1;
   cursor: help;
   position: relative;
+  transition: all 0.2s;
+}
+
+.helpIcon:hover {
+  background: #282421;
+  color: #fdfaf6;
+  border-color: #282421;
 }
 
 .helpIcon::after {
@@ -209,3 +216,17 @@
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
+
+.createBtn {
+  background-color: #8b5e3c !important;
+  color: #fdfaf6 !important;
+  border-color: #8b5e3c !important;
+  box-shadow: 0 2px 8px rgba(139, 94, 60, 0.15) !important;
+}
+
+.createBtn:hover {
+  background-color: #704b2f !important;
+  border-color: #704b2f !important;
+  box-shadow: 0 4px 14px rgba(139, 94, 60, 0.28) !important;
+}
+
