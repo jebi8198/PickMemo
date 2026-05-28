@@ -41,6 +41,7 @@ export default function DashboardPage() {
   const [loadingData, setLoadingData] = useState(true);
   const [activeModal, setActiveModal] = useState<ActiveModal>(null);
   const [isCreatingNotebook, setIsCreatingNotebook] = useState(false);
+  const [sessionNotebookId, setSessionNotebookId] = useState<string>('');
 
   // 미인증 시 로그인 리다이렉트
   useEffect(() => {
@@ -103,16 +104,17 @@ export default function DashboardPage() {
   };
 
   // ── 학습 시작 (SessionSetup → play 페이지로 이동) ──
-  const handleSessionStart = (notebookId: string, count: number) => {
+  const handleSessionStart = (notebookId: string, count: number, mode: 'review' | 'all') => {
     setActiveModal(null);
-    router.push(`/session/play?notebookId=${notebookId}&count=${count}`);
+    router.push(`/session/play?notebookId=${notebookId}&count=${count}&mode=${mode}`);
   };
 
   // notebooks를 SessionSetup 형식으로 변환
   const notebookOptions = notebooks.map((nb) => ({
     id: nb._id,
     title: nb.title,
-    reviewCount: nb.reviewDueCount ?? nb.pageCount ?? 0,
+    reviewCount: nb.reviewDueCount ?? 0,
+    pageCount: nb.pageCount ?? 0,
   }));
 
   if (status === 'loading' || loadingData) {
@@ -152,7 +154,10 @@ export default function DashboardPage() {
         <div className={styles.welcomeActions}>
           <Button
             variant="primary"
-            onClick={() => setActiveModal('session')}
+            onClick={() => {
+              setSessionNotebookId('all');
+              setActiveModal('session');
+            }}
             disabled={notebooks.length === 0}
           >
             🎯 전체 복습 시작
@@ -207,6 +212,10 @@ export default function DashboardPage() {
                 description={nb.description}
                 color={nb.color}
                 reviewCount={nb.reviewDueCount}
+                onStartSession={() => {
+                  setSessionNotebookId(nb._id);
+                  setActiveModal('session');
+                }}
               />
             ))
           ) : (
@@ -240,6 +249,7 @@ export default function DashboardPage() {
       >
         <SessionSetup
           notebooks={notebookOptions}
+          initialNotebookId={sessionNotebookId}
           onStart={handleSessionStart}
         />
       </Modal>

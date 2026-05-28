@@ -10,11 +10,45 @@ interface StudyCardProps {
   imageUrl?: string;
   isRevealed: boolean;
   onReveal: () => void;
+  isSeparator?: boolean;
+  nextNotebookTitle?: string;
 }
 
-export const StudyCard: React.FC<StudyCardProps> = ({ topic, description, keywords, imageUrl, isRevealed, onReveal }) => {
+export const StudyCard: React.FC<StudyCardProps> = ({
+  topic,
+  description,
+  keywords,
+  imageUrl,
+  isRevealed,
+  onReveal,
+  isSeparator = false,
+  nextNotebookTitle = '',
+}) => {
   const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null);
   const imageLoadFailed = Boolean(imageUrl && failedImageUrl === imageUrl);
+
+  // 구분 카드(Separator)인 경우의 UI 렌더링
+  if (isSeparator) {
+    return (
+      <div className={styles.scene}>
+        <div className={`${styles.card} ${styles.separatorCard}`}>
+          <div className={`${styles.face} ${styles.separatorFace}`}>
+            <div className={styles.separatorContent}>
+              <span className={styles.bookIcon}>📖</span>
+              <h2 className={styles.separatorTitle}>공책 변경 안내</h2>
+              <div className={styles.divider} />
+              <p className={styles.separatorDesc}>
+                다음은 <strong>&ldquo;{nextNotebookTitle}&rdquo;</strong> 공책의 카드 학습이 시작됩니다.
+              </p>
+              <span className={styles.separatorHint}>
+                아래 &lsquo;계속 학습하기&rsquo; 버튼을 눌러 계속해 주세요.
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.scene} onClick={!isRevealed ? onReveal : undefined}>
@@ -64,3 +98,4 @@ export const StudyCard: React.FC<StudyCardProps> = ({ topic, description, keywor
     </div>
   );
 };
+

@@ -178,13 +178,13 @@ export default function NotebookDetailPage() {
   };
 
   // ── 학습 시작 ──
-  const handleSessionStart = (nbId: string, count: number) => {
+  const handleSessionStart = (nbId: string, count: number, mode: 'review' | 'all') => {
     setActiveModal(null);
-    router.push(`/session/play?notebookId=${nbId}&count=${count}`);
+    router.push(`/session/play?notebookId=${nbId}&count=${count}&mode=${mode}`);
   };
 
   const notebookOption = notebook
-    ? [{ id: notebook._id, title: notebook.title, reviewCount: notebook.reviewDueCount ?? pages.length }]
+    ? [{ id: notebook._id, title: notebook.title, reviewCount: notebook.reviewDueCount ?? 0, pageCount: pages.length }]
     : [];
 
   if (isLoading) {

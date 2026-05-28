@@ -74,3 +74,75 @@
 .startBtn {
   margin-top: 1rem;
 }
+
+.tabContainer {
+  display: flex;
+  gap: 0.5rem;
+  background-color: #f4f0ea;
+  padding: 0.25rem;
+  border-radius: 8px;
+  border: 1px solid #d1cbc2;
+}
+
+.tabBtn {
+  flex: 1;
+  padding: 0.6rem 0.5rem;
+  border: none;
+  background: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.85rem;
+  color: #5e544b;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.tabBtnActive {
+  background-color: #fff;
+  color: #282421;
+  box-shadow: 0 2px 4px rgba(40, 36, 33, 0.06);
+  font-weight: 600;
+}
+
+.globalInfo {
+  background-color: #fcfbfa;
+  border: 1px dashed #d1cbc2;
+  padding: 1.25rem;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.globalLabel {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #5e544b;
+  line-height: 1.4;
+}
+
+.globalStats {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 0.5rem;
+  border-top: 1px solid #f4f0ea;
+}
+
+.statLabel {
+  font-size: 0.9rem;
+  color: #282421;
+  font-weight: 500;
+}
+
+.statValue {
+  font-size: 1.1rem;
+  color: #8b5e3c;
+  font-weight: 700;
+}
+
+.warningText {
+  color: #c05621;
+  font-weight: 500;
+}

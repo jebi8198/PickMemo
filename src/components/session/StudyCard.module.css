@@ -136,3 +136,73 @@
   padding: 0.25rem 0.75rem;
   border-radius: 999px;
 }
+
+.separatorCard {
+  transform: none !important;
+  cursor: default;
+}
+
+.separatorFace {
+  background: linear-gradient(135deg, #fdf8f0 0%, #f6eeda 100%);
+  border: 2px dashed #d6c5b3;
+  box-shadow: 0 12px 30px rgba(139, 94, 60, 0.08);
+}
+
+.separatorContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 2rem;
+  text-align: center;
+}
+
+.bookIcon {
+  font-size: 3.5rem;
+  margin-bottom: 1rem;
+  display: inline-block;
+  animation: float 3s ease-in-out infinite;
+}
+
+.separatorTitle {
+  font-size: 1.6rem;
+  color: #8b5e3c;
+  margin: 0;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.separatorDesc {
+  color: #282421;
+  font-size: 1.25rem;
+  line-height: 1.6;
+  margin: 1.5rem 0;
+  max-width: 440px;
+}
+
+.separatorDesc strong {
+  color: #8b5e3c;
+  font-weight: 700;
+  border-bottom: 2px solid #e9dccf;
+  padding-bottom: 2px;
+}
+
+.separatorHint {
+  font-size: 0.9rem;
+  color: #8a8178;
+  margin-top: 1rem;
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+

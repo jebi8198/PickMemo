@@ -40,19 +40,16 @@ function SessionPlayContent() {
   // 1. 학습 세션 카드 목록 로드
   useEffect(() => {
     async function fetchSession() {
-      if (!notebookId) {
-        setLoadError('학습할 공책이 지정되지 않았습니다.');
-        setLoading(false);
-        return;
-      }
-
       try {
         setLoading(true);
         setLoadError('');
+        const reqNotebookId = notebookId || 'all';
+        const reqMode = searchParams.get('mode') || 'review';
+
         const res = await fetch('/api/sessions/start', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ notebookId, count }),
+          body: JSON.stringify({ notebookId: reqNotebookId, count, mode: reqMode }),
         });
 
         if (!res.ok) {
@@ -121,6 +118,16 @@ function SessionPlayContent() {
       }
     } finally {
       setSubmittingFeedback(false);
+    }
+  };
+
+  // separator 카드 건너뛰기
+  const handleContinueGlobalSession = () => {
+    if (currentIndex < cards.length - 1) {
+      setCurrentIndex(prev => prev + 1);
+      setIsRevealed(false);
+    } else {
+      setIsComplete(true);
     }
   };
 
@@ -219,6 +226,8 @@ function SessionPlayContent() {
                 imageUrl={currentCard.imageUrl}
                 isRevealed={isRevealed}
                 onReveal={handleReveal}
+                isSeparator={(currentCard as any).isSeparator}
+                nextNotebookTitle={(currentCard as any).nextNotebookTitle}
               />
             </motion.div>
           )}
@@ -227,28 +236,49 @@ function SessionPlayContent() {
 
       {/* ── 피드백 & 시뮬레이션 영역 ── */}
       <div className={styles.feedbackArea}>
-        <AnimatePresence>
-          {isRevealed && currentCard && (
+        <AnimatePresence mode="wait">
+          {currentCard && (currentCard as any).isSeparator ? (
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
+              key="separator-action"
+              initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
+              exit={{ opacity: 0, y: 15 }}
               transition={{ duration: 0.3 }}
-              style={{ width: '100%' }}
+              className={styles.separatorActionWrapper}
             >
-              <FeedbackPanel
-                onFeedback={handleFeedback}
-                disabled={submittingFeedback}
-                currentIntervalDays={currentCard.intervalDays}
-                onHoverFeedback={setHoveredFeedback}
-              />
-              <FeedbackSimulation
-                currentIntervalDays={currentCard.intervalDays}
-                lastReviewedAt={currentCard.lastReviewedAt}
-                createdAt={currentCard.createdAt}
-                hoveredFeedback={hoveredFeedback}
-              />
+              <Button
+                variant="primary"
+                size="lg"
+                onClick={handleContinueGlobalSession}
+                className={styles.continueBtn}
+              >
+                계속 학습하기 ➔
+              </Button>
             </motion.div>
+          ) : (
+            isRevealed && currentCard && (
+              <motion.div
+                key="feedback-actions"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 20 }}
+                transition={{ duration: 0.3 }}
+                style={{ width: '100%' }}
+              >
+                <FeedbackPanel
+                  onFeedback={handleFeedback}
+                  disabled={submittingFeedback}
+                  currentIntervalDays={currentCard.intervalDays}
+                  onHoverFeedback={setHoveredFeedback}
+                />
+                <FeedbackSimulation
+                  currentIntervalDays={currentCard.intervalDays}
+                  lastReviewedAt={currentCard.lastReviewedAt}
+                  createdAt={currentCard.createdAt}
+                  hoveredFeedback={hoveredFeedback}
+                />
+              </motion.div>
+            )
           )}
         </AnimatePresence>
       </div>

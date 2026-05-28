@@ -1,7 +1,8 @@
 'use client';
 import React from 'react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Badge } from '../ui/Badge';
+import { Button } from '../ui/Button';
 import styles from './NotebookCard.module.css';
 
 interface NotebookCardProps {
@@ -10,6 +11,7 @@ interface NotebookCardProps {
   description?: string;
   color: string;
   reviewCount?: number;
+  onStartSession?: () => void;
 }
 
 export const NotebookCard: React.FC<NotebookCardProps> = ({
@@ -18,29 +20,59 @@ export const NotebookCard: React.FC<NotebookCardProps> = ({
   description,
   color,
   reviewCount = 0,
+  onStartSession,
 }) => {
+  const router = useRouter();
   const displayColor = color === '#6366f1' ? '#a57a57' : color;
 
+  const handleCardClick = () => {
+    router.push(`/notebooks/${id}`);
+  };
+
   return (
-    <Link href={`/notebooks/${id}`} className={styles.cardWrapper}>
-      <div className={styles.card} style={{ '--accent-color': displayColor } as React.CSSProperties}>
-        <div className={styles.spine} />
-        <div className={styles.topAccent} />
-        <div className={styles.content}>
-          <div className={styles.headerRow}>
-            <span className={styles.colorDot} />
-            {reviewCount > 0 && (
-              <div className={styles.badgeWrapper}>
-                <Badge variant="warning">{reviewCount}개 복습 예정</Badge>
-              </div>
-            )}
-          </div>
-          <div className={styles.labelSticker}>
-            <h3 className={styles.title}>{title}</h3>
-            {description && <p className={styles.description}>{description}</p>}
+    <div 
+      className={styles.cardWrapper} 
+      onClick={handleCardClick}
+      style={{ '--accent-color': displayColor } as React.CSSProperties}
+    >
+      <div className={styles.card3D}>
+        <div className={styles.card}>
+          <div className={styles.spine} />
+          <div className={styles.topAccent} />
+          
+          <div className={styles.content}>
+            <div className={styles.headerRow}>
+              <span className={styles.colorDot} />
+              {reviewCount > 0 && (
+                <div className={styles.badgeWrapper}>
+                  <Badge variant="warning">{reviewCount}개 복습</Badge>
+                </div>
+              )}
+            </div>
+            
+            <div className={styles.labelSticker}>
+              <h3 className={styles.title}>{title}</h3>
+              {description && <p className={styles.description}>{description}</p>}
+            </div>
+
+            <div className={styles.actionRow}>
+              <Button
+                variant="primary"
+                size="sm"
+                className={styles.studyBtn}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onStartSession?.();
+                }}
+              >
+                🎯 학습하기
+              </Button>
+            </div>
           </div>
         </div>
+        <div className={styles.shadow} />
       </div>
-    </Link>
+    </div>
   );
 };
+
