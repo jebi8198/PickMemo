@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { NotebookCard } from '@/components/notebook/NotebookCard';
@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { SessionSetup } from '@/components/session/SessionSetup';
 import { Header } from '@/components/layout/Header';
-import ForgettingCurveChart from '@/components/dashboard/ForgettingCurveChart';
+import ForgettingCurveChart, { ForgettingCurveCard } from '@/components/dashboard/ForgettingCurveChart';
 import styles from './page.module.css';
 
 interface INotebook {
@@ -27,10 +27,34 @@ interface IUserStats {
   totalReviewed: number;
   reviewDueToday: number;
   averageDifficulty: number;
-  pages: any[];
+  pages: ForgettingCurveCard[];
 }
 
 type ActiveModal = 'newNotebook' | 'session' | null;
+
+async function fetchDashboardPayload(): Promise<{
+  notebooks: INotebook[];
+  stats: IUserStats | null;
+  unauthorized: boolean;
+}> {
+  const [notebooksRes, statsRes] = await Promise.all([
+    fetch('/api/notebooks'),
+    fetch('/api/user/stats'),
+  ]);
+
+  if (notebooksRes.status === 401 || statsRes.status === 401) {
+    return { notebooks: [], stats: null, unauthorized: true };
+  }
+
+  const notebooksData = notebooksRes.ok ? await notebooksRes.json() : null;
+  const statsData = statsRes.ok ? await statsRes.json() as IUserStats : null;
+
+  return {
+    notebooks: Array.isArray(notebooksData) ? notebooksData : (notebooksData?.notebooks ?? []),
+    stats: statsData,
+    unauthorized: false,
+  };
+}
 
 export default function DashboardPage() {
   const { data: session, status } = useSession();
@@ -50,39 +74,57 @@ export default function DashboardPage() {
     }
   }, [status, router]);
 
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async (showLoading = true) => {
     try {
-      setLoadingData(true);
-      const [notebooksRes, statsRes] = await Promise.all([
-        fetch('/api/notebooks'),
-        fetch('/api/user/stats'),
-      ]);
+      if (showLoading) {
+        setLoadingData(true);
+      }
+      const payload = await fetchDashboardPayload();
 
-      if (notebooksRes.status === 401) {
+      if (payload.unauthorized) {
         router.push('/auth/login');
         return;
       }
 
-      if (notebooksRes.ok) {
-        const data = await notebooksRes.json();
-        // API가 배열 또는 { notebooks: [] } 형태로 반환할 수 있으므로 양쪽 처리
-        setNotebooks(Array.isArray(data) ? data : (data.notebooks ?? []));
-      }
-
-      if (statsRes.ok) {
-        setStats(await statsRes.json());
-      }
+      setNotebooks(payload.notebooks);
+      setStats(payload.stats);
     } catch (err) {
       console.error('Failed to load dashboard data:', err);
     } finally {
       setLoadingData(false);
     }
-  };
+  }, [router]);
 
   useEffect(() => {
     if (status !== 'authenticated') return;
-    loadDashboardData();
-  }, [status]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    let cancelled = false;
+
+    void fetchDashboardPayload()
+      .then((payload) => {
+        if (cancelled) return;
+
+        if (payload.unauthorized) {
+          router.push('/auth/login');
+          return;
+        }
+
+        setNotebooks(payload.notebooks);
+        setStats(payload.stats);
+      })
+      .catch((err) => {
+        console.error('Failed to load dashboard data:', err);
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoadingData(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [status, router]);
 
   // ── 새 공책 생성 ──
   const handleCreateNotebook = async (data: { title: string; description: string; color: string }) => {

@@ -5,7 +5,7 @@ import Notebook from '@/models/Notebook';
 import Page from '@/models/Page';
 import { buildSessionQueue, fisherYatesShuffle } from '@/lib/shuffle';
 import { getErrorMessage } from '@/lib/api';
-import type { IPage } from '@/types';
+import type { IPage, SessionQueueItem } from '@/types';
 import mongoose from 'mongoose';
 
 export async function POST(req: Request) {
@@ -32,7 +32,7 @@ export async function POST(req: Request) {
     // 1. 전체 복습 (notebookId가 없거나 'all'인 경우)
     if (!notebookId || notebookId === 'all') {
       const allNotebooks = await Notebook.find({ userId: session.user.id });
-      let combinedQueue: any[] = [];
+      const combinedQueue: SessionQueueItem[] = [];
       let totalDueCount = 0;
 
       for (const nb of allNotebooks) {
@@ -65,10 +65,11 @@ export async function POST(req: Request) {
       }
 
       // 지정한 개수만큼 자름
-      let sessionPages = combinedQueue.slice(0, limit);
+      const sessionPages = combinedQueue.slice(0, limit);
 
       // 만약 잘린 세션의 맨 마지막 카드가 하필 separator라면 의미가 없으므로 제거
-      if (sessionPages.length > 0 && sessionPages[sessionPages.length - 1].isSeparator) {
+      const lastSessionItem = sessionPages[sessionPages.length - 1];
+      if (lastSessionItem && 'isSeparator' in lastSessionItem && lastSessionItem.isSeparator) {
         sessionPages.pop();
       }
 
@@ -93,15 +94,9 @@ export async function POST(req: Request) {
     const typedPages = pages as unknown as IPage[];
     const reviewDueCount = typedPages.filter((page) => new Date(page.nextReviewDate) <= now).length;
 
-    let sessionPages: IPage[] = [];
-
-    if (mode === 'all') {
-      // 복습 주기 상관없이 전체 카드 셔플하여 limit개수만큼 가져옴
-      sessionPages = fisherYatesShuffle(typedPages).slice(0, limit);
-    } else {
-      // 복습 주기 도래 카드 우선순위 셔플
-      sessionPages = buildSessionQueue(typedPages, limit);
-    }
+    const sessionPages = mode === 'all'
+      ? fisherYatesShuffle(typedPages).slice(0, limit)
+      : buildSessionQueue(typedPages, limit);
 
     const result = {
       pages: sessionPages,
@@ -114,4 +109,3 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }
-

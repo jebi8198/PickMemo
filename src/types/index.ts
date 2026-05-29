@@ -37,6 +37,22 @@ export interface IPage {
   updatedAt: Date;
 }
 
+export interface ISessionSeparator {
+  _id: string;
+  isSeparator: true;
+  nextNotebookTitle: string;
+  topic: string;
+  description: string;
+  keywords: string[];
+  reviewCount: number;
+  intervalDays: number;
+  difficultyWeight: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export type SessionQueueItem = IPage | ISessionSeparator;
+
 export type FeedbackType = 'AGAIN' | 'HARD' | 'GOOD' | 'EASY';
 
 export interface SessionConfig {
@@ -45,7 +61,7 @@ export interface SessionConfig {
 }
 
 export interface SessionResult {
-  pages: IPage[];
+  pages: SessionQueueItem[];
   totalAvailable: number;
   reviewDueCount: number;
 }

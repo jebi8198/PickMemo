@@ -211,19 +211,21 @@ export default function NotebookDetailPage() {
 
     try {
       setIsDeleting(true);
-      const responses = await Promise.all(
-        selectedPages.map((page) => fetch(`/api/pages/${page._id}`, { method: 'DELETE' }))
-      );
+      const res = await fetch('/api/pages/bulk-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pageIds: selectedPages.map((page) => page._id) }),
+      });
 
-      if (responses.some((res) => !res.ok)) {
-        throw new Error('선택한 페이지 중 일부를 삭제하지 못했습니다.');
-      }
+      if (!res.ok) throw new Error('선택한 페이지를 삭제하지 못했습니다.');
 
-      const selectedIds = new Set(selectedPages.map((page) => page._id));
+      const result = (await res.json()) as { deletedIds?: string[] };
+      const selectedIds = new Set(result.deletedIds ?? selectedPages.map((page) => page._id));
+      const deletedPages = selectedPages.filter((page) => selectedIds.has(page._id));
       setPages((current) => current.filter((page) => !selectedIds.has(page._id)));
       setSelectedPageIds([]);
       setLastSelectedPageId(null);
-      updateReviewDueAfterDelete(selectedPages);
+      updateReviewDueAfterDelete(deletedPages);
     } catch (error) {
       console.error('Failed to delete selected pages:', error);
     } finally {

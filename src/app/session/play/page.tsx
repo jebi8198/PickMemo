@@ -10,7 +10,7 @@ import { SessionComplete } from '@/components/session/SessionComplete';
 import FeedbackSimulation from '@/components/session/FeedbackSimulation';
 import { Button } from '@/components/ui/Button';
 import BrandLogo from '@/components/ui/BrandLogo';
-import { FeedbackType, IPage } from '@/types';
+import { FeedbackType, SessionQueueItem } from '@/types';
 import styles from './page.module.css';
 
 function SessionPlayContent() {
@@ -20,7 +20,7 @@ function SessionPlayContent() {
   const countParam = searchParams.get('count') || '10';
   const count = parseInt(countParam, 10);
 
-  const [cards, setCards] = useState<IPage[]>([]);
+  const [cards, setCards] = useState<SessionQueueItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isRevealed, setIsRevealed] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
@@ -37,6 +37,16 @@ function SessionPlayContent() {
     EASY: 0,
   });
 
+  const mode = searchParams.get('mode') || 'review';
+
+  const isSeparatorCard = (card: SessionQueueItem): card is Extract<SessionQueueItem, { isSeparator: true }> => {
+    return 'isSeparator' in card && card.isSeparator;
+  };
+
+  const getImageUrl = (card: SessionQueueItem) => {
+    return isSeparatorCard(card) ? undefined : card.imageUrl;
+  };
+
   // 1. 학습 세션 카드 목록 로드
   useEffect(() => {
     async function fetchSession() {
@@ -44,12 +54,11 @@ function SessionPlayContent() {
         setLoading(true);
         setLoadError('');
         const reqNotebookId = notebookId || 'all';
-        const reqMode = searchParams.get('mode') || 'review';
 
         const res = await fetch('/api/sessions/start', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ notebookId: reqNotebookId, count, mode: reqMode }),
+          body: JSON.stringify({ notebookId: reqNotebookId, count, mode }),
         });
 
         if (!res.ok) {
@@ -70,13 +79,13 @@ function SessionPlayContent() {
     }
 
     fetchSession();
-  }, [notebookId, count]);
+  }, [notebookId, count, mode]);
 
   const currentCard = cards[currentIndex];
 
   // 2. 피드백 제출
   const handleFeedback = async (feedback: FeedbackType) => {
-    if (!currentCard || submittingFeedback) return;
+    if (!currentCard || submittingFeedback || isSeparatorCard(currentCard)) return;
 
     try {
       setSubmittingFeedback(true);
@@ -223,11 +232,11 @@ function SessionPlayContent() {
                 topic={currentCard.topic}
                 description={currentCard.description}
                 keywords={currentCard.keywords || []}
-                imageUrl={currentCard.imageUrl}
+                imageUrl={getImageUrl(currentCard)}
                 isRevealed={isRevealed}
                 onReveal={handleReveal}
-                isSeparator={(currentCard as any).isSeparator}
-                nextNotebookTitle={(currentCard as any).nextNotebookTitle}
+                isSeparator={isSeparatorCard(currentCard)}
+                nextNotebookTitle={isSeparatorCard(currentCard) ? currentCard.nextNotebookTitle : undefined}
               />
             </motion.div>
           )}
@@ -237,7 +246,7 @@ function SessionPlayContent() {
       {/* ── 피드백 & 시뮬레이션 영역 ── */}
       <div className={styles.feedbackArea}>
         <AnimatePresence mode="wait">
-          {currentCard && (currentCard as any).isSeparator ? (
+          {currentCard && isSeparatorCard(currentCard) ? (
             <motion.div
               key="separator-action"
               initial={{ opacity: 0, y: 15 }}
@@ -256,7 +265,7 @@ function SessionPlayContent() {
               </Button>
             </motion.div>
           ) : (
-            isRevealed && currentCard && (
+            isRevealed && currentCard && !isSeparatorCard(currentCard) && (
               <motion.div
                 key="feedback-actions"
                 initial={{ opacity: 0, y: 20 }}
