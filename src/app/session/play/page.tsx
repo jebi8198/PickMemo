@@ -10,6 +10,7 @@ import { SessionComplete } from '@/components/session/SessionComplete';
 import FeedbackSimulation from '@/components/session/FeedbackSimulation';
 import { Button } from '@/components/ui/Button';
 import BrandLogo from '@/components/ui/BrandLogo';
+import { useConfirm } from '@/components/providers/ConfirmProvider';
 import { useToast } from '@/components/providers/ToastProvider';
 import { FeedbackType, SessionQueueItem } from '@/types';
 import styles from './page.module.css';
@@ -17,6 +18,7 @@ import styles from './page.module.css';
 function SessionPlayContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { confirm } = useConfirm();
   const { showToast } = useToast();
   const notebookId = searchParams.get('notebookId') || '';
   const countParam = searchParams.get('count') || '10';
@@ -149,8 +151,14 @@ function SessionPlayContent() {
     setIsRevealed(true);
   };
 
-  const handleQuit = () => {
-    if (confirm('학습을 종료하고 대시보드로 돌아가시겠습니까? 진행 사항은 중간 저장됩니다.')) {
+  const handleQuit = async () => {
+    const confirmed = await confirm({
+      title: '학습 종료',
+      message: '학습을 종료하고 대시보드로 돌아가시겠습니까?\n진행 사항은 중간 저장됩니다.',
+      confirmLabel: '종료',
+      danger: true,
+    });
+    if (confirmed) {
       router.push('/dashboard');
     }
   };

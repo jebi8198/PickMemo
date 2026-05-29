@@ -9,6 +9,7 @@ import { PageForm, PageFormData } from '@/components/page/PageForm';
 import { NotebookForm } from '@/components/notebook/NotebookForm';
 import { SessionSetup } from '@/components/session/SessionSetup';
 import { Header } from '@/components/layout/Header';
+import { useConfirm } from '@/components/providers/ConfirmProvider';
 import { useToast } from '@/components/providers/ToastProvider';
 import { getResponseError } from '@/lib/http';
 import styles from './page.module.css';
@@ -42,6 +43,7 @@ const pageSize = 24;
 export default function NotebookDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { confirm } = useConfirm();
   const { showToast } = useToast();
   const notebookId = useMemo(() => {
     const id = params.id;
@@ -248,7 +250,13 @@ export default function NotebookDetailPage() {
 
   // ── 페이지 삭제 ──
   const handleDeletePage = async (pageId: string) => {
-    if (!window.confirm('이 페이지를 삭제하시겠습니까?')) return;
+    const confirmed = await confirm({
+      title: '페이지 삭제',
+      message: '이 페이지를 삭제하시겠습니까?',
+      confirmLabel: '삭제',
+      danger: true,
+    });
+    if (!confirmed) return;
     try {
       const res = await fetch(`/api/pages/${pageId}`, { method: 'DELETE' });
       if (!res.ok) throw new Error(await getResponseError(res, '페이지를 삭제하지 못했습니다.'));
@@ -266,7 +274,13 @@ export default function NotebookDetailPage() {
 
   const handleDeleteSelectedPages = async () => {
     if (selectedPages.length === 0) return;
-    if (!window.confirm(`선택한 페이지 ${selectedPages.length}개를 삭제하시겠습니까?`)) return;
+    const confirmed = await confirm({
+      title: '선택 페이지 삭제',
+      message: `선택한 페이지 ${selectedPages.length}개를 삭제하시겠습니까?`,
+      confirmLabel: '삭제',
+      danger: true,
+    });
+    if (!confirmed) return;
 
     try {
       setIsDeleting(true);
@@ -320,7 +334,13 @@ export default function NotebookDetailPage() {
   // ── 공책 삭제 ──
   const handleDeleteNotebook = async () => {
     if (!notebookId) return;
-    if (!window.confirm(`'${notebook?.title}' 공책을 삭제하시겠습니까?\n이 공책의 모든 페이지도 함께 삭제됩니다.`)) return;
+    const confirmed = await confirm({
+      title: '공책 삭제',
+      message: `'${notebook?.title}' 공책을 삭제하시겠습니까?\n이 공책의 모든 페이지도 함께 삭제됩니다.`,
+      confirmLabel: '공책 삭제',
+      danger: true,
+    });
+    if (!confirmed) return;
     try {
       setIsDeleting(true);
       const res = await fetch(`/api/notebooks/${notebookId}`, { method: 'DELETE' });

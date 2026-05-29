@@ -1,36 +1,71 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# PickMemo
 
-## Getting Started
+PickMemo is a Next.js learning app for creating notebooks, turning source material into flashcards, and reviewing cards with spaced repetition.
 
-First, run the development server:
+## Stack
+
+- Next.js 16 App Router
+- React 19
+- NextAuth credentials auth
+- MongoDB with Mongoose
+- CSS Modules
+- Node test runner
+
+## Requirements
+
+- Node.js 24 or newer
+- MongoDB connection string
+- `NEXTAUTH_SECRET`
+
+## Setup
+
+```bash
+npm install
+cp .env.example .env.local
+npm run dev
+```
+
+Open `http://localhost:3000`.
+
+## Environment
+
+Create `.env.local`:
+
+```bash
+MONGODB_URI=mongodb://localhost:27017/pick-memo
+NEXTAUTH_SECRET=replace-with-a-long-random-secret
+NEXTAUTH_URL=http://localhost:3000
+```
+
+## Scripts
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run lint
+npm test
+npm run build
+npm start
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Core Features
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- Register/login with credentials
+- Create, edit, and delete notebooks
+- Create cards manually or by JSON bulk input
+- Copy an external LLM prompt for converting source material into PickMemo JSON
+- Select, Shift-select, and bulk delete cards
+- Start review sessions by notebook or across all notebooks
+- Save feedback and schedule the next review
+- Dashboard stats and forgetting-curve visualization
+- Toast notifications for major success and failure flows
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Quality Notes
 
-## Learn More
+- API write routes use shared validation utilities in `src/lib/validation.ts`.
+- Basic in-memory rate limiting is applied to registration and login attempts.
+- Current tests cover validation, review scheduling, and session queue utilities.
+- The current review algorithm is SM-2-inspired but still uses the existing schema.
 
-To learn more about Next.js, take a look at the following resources:
+## Improvement Tracking
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+See `Docs/Improvements.md`.

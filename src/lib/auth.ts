@@ -3,6 +3,7 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
 import dbConnect from './mongodb';
 import User from '@/models/User';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
@@ -16,8 +17,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!credentials?.email || !credentials?.password) {
           return null;
         }
+
+        const email = String(credentials.email).trim().toLowerCase();
+        const rateLimit = checkRateLimit(`login:${email}`, 10, 15 * 60 * 1000);
+        if (!rateLimit.allowed) {
+          return null;
+        }
+
         await dbConnect();
-        const user = await User.findOne({ email: credentials.email }).select('+password');
+        const user = await User.findOne({ email }).select('+password');
         if (!user) {
           return null;
         }

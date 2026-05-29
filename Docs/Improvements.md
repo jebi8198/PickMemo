@@ -15,6 +15,10 @@ PickMemo is a working MVP: authentication, notebooks, cards, bulk JSON input, st
 - Focused Node tests now cover review scheduling, session queue utilities, and validation.
 - The review algorithm now uses a more SM-2-inspired difficulty and interval calculation.
 - Notebook and card lists now include large-dataset controls such as search, filtering, sorting, and pagination.
+- Project setup is documented in `README.md` and `.env.example`.
+- Browser confirm dialogs were replaced with app-styled confirmation dialogs.
+- Unused recovered CSS modules were removed.
+- Basic in-memory rate limiting was added for registration and login attempts.
 
 ## Priority Work
 
@@ -41,7 +45,7 @@ PickMemo is a working MVP: authentication, notebooks, cards, bulk JSON input, st
 
 ## Follow-Up Cleanup
 
-- Remove unused CSS files left from earlier recovery work.
-- Replace `window.confirm` with app-styled confirmation dialogs.
-- Add `README.md` project setup details and `.env.example`.
-- Add basic authentication hardening: password policy, email normalization, and rate limiting.
+- Add integration-style API tests for route validation and bulk delete.
+- Consider server-side pagination when notebook/card counts become large enough to affect API response time.
+- Replace the in-memory rate limiter with a shared store such as Redis before multi-instance deployment.
+- Add a migration path if the review model moves from the current schema to full FSRS fields.

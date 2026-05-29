@@ -3,10 +3,19 @@ import bcrypt from 'bcryptjs';
 import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
 import { getErrorMessage } from '@/lib/api';
+import { checkRateLimit, getClientKey } from '@/lib/rate-limit';
 import { validateRegisterInput } from '@/lib/validation';
 
 export async function POST(req: Request) {
   try {
+    const rateLimit = checkRateLimit(getClientKey(req, 'register'), 8, 60 * 60 * 1000);
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: `Too many registration attempts. Try again in ${rateLimit.retryAfterSeconds} seconds.` },
+        { status: 429 }
+      );
+    }
+
     await dbConnect();
     const validation = validateRegisterInput(await req.json());
 

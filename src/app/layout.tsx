@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter, Lora } from 'next/font/google';
 import AuthProvider from '@/components/providers/AuthProvider';
+import { ConfirmProvider } from '@/components/providers/ConfirmProvider';
 import { ToastProvider } from '@/components/providers/ToastProvider';
 import './globals.css';
 
@@ -37,7 +38,9 @@ export default function RootLayout({
     <html lang="ko" className={`${inter.variable} ${lora.variable}`} data-scroll-behavior="smooth">
       <body>
         <AuthProvider>
-          <ToastProvider>{children}</ToastProvider>
+          <ToastProvider>
+            <ConfirmProvider>{children}</ConfirmProvider>
+          </ToastProvider>
         </AuthProvider>
       </body>
     </html>
