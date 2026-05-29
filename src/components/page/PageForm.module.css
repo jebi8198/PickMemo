@@ -72,6 +72,64 @@
   line-height: 1.5;
 }
 
+.promptBox {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid #e0d6cb;
+  border-radius: 8px;
+  background: #fffaf2;
+}
+
+.promptHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.promptTitle {
+  margin: 0 0 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #282421;
+}
+
+.promptHelp {
+  margin: 0;
+  color: #6f6258;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.copyPromptButton {
+  flex: 0 0 auto;
+  border: 1px solid #cbbdae;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #282421;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  padding: 0.45rem 0.75rem;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s, transform 0.2s;
+}
+
+.copyPromptButton:hover {
+  background: #f2ebe3;
+  border-color: #a99582;
+  transform: translateY(-1px);
+}
+
+.promptTextarea {
+  min-height: 180px;
+  font-family: Consolas, 'Courier New', monospace;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  background: #ffffff;
+}
+
 .preview {
   border: 1px solid #e5e0d8;
   border-radius: 8px;

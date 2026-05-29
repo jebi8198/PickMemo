@@ -29,6 +29,31 @@ const exampleJson = `[
   }
 ]`;
 
+const llmJsonPrompt = `아래 학습 자료를 PickMemo에 일괄 등록할 수 있는 JSON 배열로 정리해줘.
+
+규칙:
+- 반드시 JSON만 출력해. 설명, 마크다운 코드블록, 주석은 쓰지 마.
+- 최상위 구조는 배열이어야 해.
+- 각 항목은 topic, description, keywords, imageUrl 필드만 사용해.
+- topic은 카드 앞면에 들어갈 짧은 질문 또는 핵심 키워드로 작성해.
+- description은 카드 뒷면에 들어갈 정확하고 충분한 답변으로 작성해.
+- keywords는 힌트용 핵심어 문자열 배열로 작성해.
+- imageUrl은 이미지가 없으면 빈 문자열로 둬.
+- 중복된 topic은 만들지 마.
+
+출력 예시:
+[
+  {
+    "topic": "핵심 개념",
+    "description": "카드 뒷면에 표시할 설명입니다.",
+    "keywords": ["키워드1", "키워드2"],
+    "imageUrl": ""
+  }
+]
+
+학습 자료:
+`;
+
 function normalizeImageUrl(value: string) {
   const trimmed = value.trim();
   if (!trimmed) return '';
@@ -129,6 +154,7 @@ export const PageForm: React.FC<PageFormProps> = ({ initialData, onSubmit, onSub
   const [jsonInput, setJsonInput] = useState(exampleJson);
   const [error, setError] = useState('');
   const [imageError, setImageError] = useState(false);
+  const [promptCopied, setPromptCopied] = useState(false);
 
   const normalizedImageUrl = normalizeImageUrl(imageUrl);
 
@@ -168,6 +194,16 @@ export const PageForm: React.FC<PageFormProps> = ({ initialData, onSubmit, onSub
   const handleImageUrlChange = (value: string) => {
     setImageUrl(value);
     setImageError(false);
+  };
+
+  const handleCopyPrompt = async () => {
+    try {
+      await navigator.clipboard.writeText(llmJsonPrompt);
+      setPromptCopied(true);
+      window.setTimeout(() => setPromptCopied(false), 1600);
+    } catch {
+      setError('프롬프트를 복사하지 못했습니다. 아래 내용을 직접 선택해 복사해주세요.');
+    }
   };
 
   return (
@@ -225,19 +261,40 @@ export const PageForm: React.FC<PageFormProps> = ({ initialData, onSubmit, onSub
           )}
         </>
       ) : (
-        <div className={styles.field}>
-          <label className={styles.label}>JSON 카드 목록</label>
-          <textarea
-            className={`${styles.textarea} ${styles.jsonTextarea}`}
-            value={jsonInput}
-            onChange={(e) => {
-              setJsonInput(e.target.value);
-              setError('');
-            }}
-            rows={14}
-            spellCheck={false}
-          />
-        </div>
+        <>
+          <div className={styles.field}>
+            <label className={styles.label}>JSON 카드 목록</label>
+            <textarea
+              className={`${styles.textarea} ${styles.jsonTextarea}`}
+              value={jsonInput}
+              onChange={(e) => {
+                setJsonInput(e.target.value);
+                setError('');
+              }}
+              rows={14}
+              spellCheck={false}
+            />
+          </div>
+
+          <div className={styles.promptBox}>
+            <div className={styles.promptHeader}>
+              <div>
+                <p className={styles.promptTitle}>외부 LLM 변환 프롬프트</p>
+                <p className={styles.promptHelp}>자료를 JSON 카드 목록으로 바꿀 때 이 프롬프트를 먼저 복사해 사용하세요.</p>
+              </div>
+              <button type="button" className={styles.copyPromptButton} onClick={handleCopyPrompt}>
+                {promptCopied ? '복사됨' : '복사'}
+              </button>
+            </div>
+            <textarea
+              className={`${styles.textarea} ${styles.promptTextarea}`}
+              value={llmJsonPrompt}
+              readOnly
+              rows={12}
+              spellCheck={false}
+            />
+          </div>
+        </>
       )}
 
       {error && <p className={styles.error}>{error}</p>}
