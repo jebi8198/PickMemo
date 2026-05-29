@@ -20,7 +20,7 @@
 }
 
 .modal {
-  background-color: var(--bg-card, #fdfaf6);
+  background-color: #ffffff;
   border-radius: var(--radius-xl, 12px);
   box-shadow: 0 24px 40px -8px rgba(40, 36, 33, 0.18), 0 8px 16px -4px rgba(40, 36, 33, 0.08);
   width: 90%;
@@ -50,7 +50,7 @@
   align-items: center;
   position: sticky;
   top: 0;
-  background: var(--bg-card, #fdfaf6);
+  background: #ffffff;
   z-index: 1;
 }
 
