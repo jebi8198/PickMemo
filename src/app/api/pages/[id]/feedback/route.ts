@@ -4,6 +4,7 @@ import dbConnect from '@/lib/mongodb';
 import Page from '@/models/Page';
 import { calculateNextReview } from '@/lib/review-algorithm';
 import { getErrorMessage } from '@/lib/api';
+import { validateFeedbackInput } from '@/lib/validation';
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -15,10 +16,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const { id } = await params;
     await dbConnect();
 
-    const { feedback } = await req.json();
-    if (!['AGAIN', 'HARD', 'GOOD', 'EASY'].includes(feedback)) {
-      return NextResponse.json({ error: 'Invalid feedback type' }, { status: 400 });
+    const validation = validateFeedbackInput(await req.json());
+    if (!validation.ok) {
+      return NextResponse.json({ error: validation.error }, { status: 400 });
     }
+    const feedback = validation.value;
 
     const page = await Page.findOne({ _id: id, userId: session.user.id });
     if (!page) {

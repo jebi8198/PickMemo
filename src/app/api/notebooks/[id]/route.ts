@@ -4,6 +4,7 @@ import dbConnect from '@/lib/mongodb';
 import Notebook from '@/models/Notebook';
 import Page from '@/models/Page';
 import { getErrorMessage } from '@/lib/api';
+import { validateNotebookInput } from '@/lib/validation';
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -35,11 +36,17 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
     const { id } = await params;
     await dbConnect();
-    const { title, description, color, isPublic } = await req.json();
+    const validation = validateNotebookInput(await req.json());
+
+    if (!validation.ok) {
+      return NextResponse.json({ error: validation.error }, { status: 400 });
+    }
+
+    const { title, description, color } = validation.value;
 
     const notebook = await Notebook.findOneAndUpdate(
       { _id: id, userId: session.user.id },
-      { title, description, color, isPublic },
+      { title, description, color },
       { new: true }
     );
 

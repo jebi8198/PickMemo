@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
-import mongoose from 'mongoose';
 import { auth } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import Notebook from '@/models/Notebook';
 import Page from '@/models/Page';
 import { getErrorMessage } from '@/lib/api';
+import { validateObjectIdList } from '@/lib/validation';
 
 interface BulkDeleteBody {
   pageIds?: unknown;
@@ -19,21 +19,12 @@ export async function POST(req: Request) {
     const userId = session.user.id;
 
     const body = (await req.json()) as BulkDeleteBody;
-    const pageIds = Array.isArray(body.pageIds)
-      ? body.pageIds.filter((id): id is string => typeof id === 'string')
-      : [];
+    const validation = validateObjectIdList(body.pageIds, 'pageIds', 200);
 
-    if (pageIds.length === 0) {
-      return NextResponse.json({ error: 'pageIds is required' }, { status: 400 });
+    if (!validation.ok) {
+      return NextResponse.json({ error: validation.error }, { status: 400 });
     }
-
-    if (pageIds.length > 200) {
-      return NextResponse.json({ error: 'You can delete up to 200 pages at once' }, { status: 400 });
-    }
-
-    if (pageIds.some((id) => !mongoose.isValidObjectId(id))) {
-      return NextResponse.json({ error: 'Invalid page id' }, { status: 400 });
-    }
+    const pageIds = validation.value;
 
     await dbConnect();
 

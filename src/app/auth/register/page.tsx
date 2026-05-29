@@ -4,10 +4,13 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
+import { useToast } from '@/components/providers/ToastProvider';
+import { getResponseError } from '@/lib/http';
 import styles from './page.module.css';
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { showToast } = useToast();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -16,10 +19,24 @@ export default function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password }),
+      });
+
+      if (!res.ok) {
+        throw new Error(await getResponseError(res, '회원가입에 실패했습니다.'));
+      }
+
+      showToast('회원가입이 완료되었습니다. 로그인해주세요.', 'success');
       router.push('/auth/login');
-    }, 1000);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : '회원가입에 실패했습니다.', 'error');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

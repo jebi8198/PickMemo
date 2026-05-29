@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { NotebookCard } from '@/components/notebook/NotebookCard';
@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { SessionSetup } from '@/components/session/SessionSetup';
 import { Header } from '@/components/layout/Header';
+import { useToast } from '@/components/providers/ToastProvider';
+import { getResponseError } from '@/lib/http';
 import ForgettingCurveChart, { ForgettingCurveCard } from '@/components/dashboard/ForgettingCurveChart';
 import styles from './page.module.css';
 
@@ -31,6 +33,7 @@ interface IUserStats {
 }
 
 type ActiveModal = 'newNotebook' | 'session' | null;
+type NotebookSort = 'recent' | 'title' | 'due';
 
 async function fetchDashboardPayload(): Promise<{
   notebooks: INotebook[];
@@ -59,6 +62,7 @@ async function fetchDashboardPayload(): Promise<{
 export default function DashboardPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const { showToast } = useToast();
 
   const [notebooks, setNotebooks] = useState<INotebook[]>([]);
   const [stats, setStats] = useState<IUserStats | null>(null);
@@ -66,6 +70,8 @@ export default function DashboardPage() {
   const [activeModal, setActiveModal] = useState<ActiveModal>(null);
   const [isCreatingNotebook, setIsCreatingNotebook] = useState(false);
   const [sessionNotebookId, setSessionNotebookId] = useState<string>('');
+  const [notebookSearch, setNotebookSearch] = useState('');
+  const [notebookSort, setNotebookSort] = useState<NotebookSort>('recent');
 
   // 미인증 시 로그인 리다이렉트
   useEffect(() => {
@@ -90,10 +96,11 @@ export default function DashboardPage() {
       setStats(payload.stats);
     } catch (err) {
       console.error('Failed to load dashboard data:', err);
+      showToast('대시보드 데이터를 불러오지 못했습니다.', 'error');
     } finally {
       setLoadingData(false);
     }
-  }, [router]);
+  }, [router, showToast]);
 
   useEffect(() => {
     if (status !== 'authenticated') return;
@@ -114,6 +121,7 @@ export default function DashboardPage() {
       })
       .catch((err) => {
         console.error('Failed to load dashboard data:', err);
+        showToast('대시보드 데이터를 불러오지 못했습니다.', 'error');
       })
       .finally(() => {
         if (!cancelled) {
@@ -124,7 +132,7 @@ export default function DashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [status, router]);
+  }, [status, router, showToast]);
 
   // ── 새 공책 생성 ──
   const handleCreateNotebook = async (data: { title: string; description: string; color: string }) => {
@@ -135,11 +143,13 @@ export default function DashboardPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
-      if (!res.ok) throw new Error('공책 생성 실패');
+      if (!res.ok) throw new Error(await getResponseError(res, '공책 생성 실패'));
       setActiveModal(null);
       await loadDashboardData(); // 목록 갱신
+      showToast('새 공책을 만들었습니다.', 'success');
     } catch (err) {
       console.error(err);
+      showToast(err instanceof Error ? err.message : '공책을 생성하지 못했습니다.', 'error');
     } finally {
       setIsCreatingNotebook(false);
     }
@@ -158,6 +168,26 @@ export default function DashboardPage() {
     reviewCount: nb.reviewDueCount ?? 0,
     pageCount: nb.pageCount ?? 0,
   }));
+  const visibleNotebooks = useMemo(() => {
+    const query = notebookSearch.trim().toLowerCase();
+
+    return notebooks
+      .filter((notebook) => {
+        if (!query) return true;
+        return `${notebook.title} ${notebook.description ?? ''}`.toLowerCase().includes(query);
+      })
+      .sort((a, b) => {
+        switch (notebookSort) {
+          case 'title':
+            return a.title.localeCompare(b.title, 'ko');
+          case 'due':
+            return (b.reviewDueCount ?? 0) - (a.reviewDueCount ?? 0);
+          case 'recent':
+          default:
+            return 0;
+        }
+      });
+  }, [notebookSearch, notebookSort, notebooks]);
 
   if (status === 'loading' || loadingData) {
     return (
@@ -264,9 +294,34 @@ export default function DashboardPage() {
             ➕ 새 공책 만들기
           </Button>
         </div>
+        <div className={styles.notebookToolbar}>
+          <div className={styles.searchBox}>
+            <label className={styles.controlLabel} htmlFor="notebook-search">공책 검색</label>
+            <input
+              id="notebook-search"
+              className={styles.searchInput}
+              value={notebookSearch}
+              onChange={(event) => setNotebookSearch(event.target.value)}
+              placeholder="공책 이름 또는 설명 검색"
+            />
+          </div>
+          <div className={styles.sortBox}>
+            <label className={styles.controlLabel} htmlFor="notebook-sort">정렬</label>
+            <select
+              id="notebook-sort"
+              className={styles.select}
+              value={notebookSort}
+              onChange={(event) => setNotebookSort(event.target.value as NotebookSort)}
+            >
+              <option value="recent">기본순</option>
+              <option value="title">이름순</option>
+              <option value="due">복습 많은순</option>
+            </select>
+          </div>
+        </div>
         <div className={styles.notebooksGrid}>
-          {notebooks.length > 0 ? (
-            notebooks.map((nb) => (
+          {visibleNotebooks.length > 0 ? (
+            visibleNotebooks.map((nb) => (
               <NotebookCard
                 key={nb._id}
                 id={nb._id}
@@ -283,11 +338,13 @@ export default function DashboardPage() {
           ) : (
             <div className={styles.emptyState}>
               <span style={{ fontSize: '3rem' }}>📭</span>
-              <h3 className={styles.emptyTitle}>생성된 공책이 없습니다</h3>
-              <p>기억하고 싶은 지식을 기록할 첫 번째 공책을 만들어 보세요.</p>
-              <Button variant="primary" onClick={() => setActiveModal('newNotebook')}>
-                첫 공책 만들기
-              </Button>
+              <h3 className={styles.emptyTitle}>{notebooks.length === 0 ? '생성된 공책이 없습니다' : '검색 결과가 없습니다'}</h3>
+              <p>{notebooks.length === 0 ? '기억하고 싶은 지식을 기록할 첫 번째 공책을 만들어 보세요.' : '검색어를 바꾸거나 정렬 조건을 조정해보세요.'}</p>
+              {notebooks.length === 0 && (
+                <Button variant="primary" onClick={() => setActiveModal('newNotebook')}>
+                  첫 공책 만들기
+                </Button>
+              )}
             </div>
           )}
         </div>

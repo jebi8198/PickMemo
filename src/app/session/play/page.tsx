@@ -10,12 +10,14 @@ import { SessionComplete } from '@/components/session/SessionComplete';
 import FeedbackSimulation from '@/components/session/FeedbackSimulation';
 import { Button } from '@/components/ui/Button';
 import BrandLogo from '@/components/ui/BrandLogo';
+import { useToast } from '@/components/providers/ToastProvider';
 import { FeedbackType, SessionQueueItem } from '@/types';
 import styles from './page.module.css';
 
 function SessionPlayContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { showToast } = useToast();
   const notebookId = searchParams.get('notebookId') || '';
   const countParam = searchParams.get('count') || '10';
   const count = parseInt(countParam, 10);
@@ -72,6 +74,7 @@ function SessionPlayContent() {
       } catch (err) {
         console.error('Failed to fetch session cards:', err);
         setLoadError(err instanceof Error ? err.message : '학습 카드를 불러오지 못했습니다.');
+        showToast(err instanceof Error ? err.message : '학습 카드를 불러오지 못했습니다.', 'error');
         setCards([]);
       } finally {
         setLoading(false);
@@ -79,7 +82,7 @@ function SessionPlayContent() {
     }
 
     fetchSession();
-  }, [notebookId, count, mode]);
+  }, [notebookId, count, mode, showToast]);
 
   const currentCard = cards[currentIndex];
 
@@ -105,6 +108,7 @@ function SessionPlayContent() {
 
       if (!res.ok) {
         console.error('Failed to save feedback on server');
+        showToast('피드백을 서버에 저장하지 못했습니다.', 'error');
       }
 
       // 다음 카드로 전환 애니메이션 준비
@@ -117,6 +121,7 @@ function SessionPlayContent() {
       }
     } catch (err) {
       console.error(err);
+      showToast('피드백 처리 중 오류가 발생했습니다.', 'error');
       // 오프라인 상태에서도 데모를 진행할 수 있게 로컬 상태 진행
       setHoveredFeedback(null);
       if (currentIndex < cards.length - 1) {

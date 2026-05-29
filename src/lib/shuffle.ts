@@ -1,4 +1,4 @@
-import { IPage } from '@/types';
+import type { IPage } from '@/types';
 
 export function fisherYatesShuffle<T>(array: T[]): T[] {
   const shuffled = [...array];

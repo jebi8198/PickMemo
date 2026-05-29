@@ -5,8 +5,8 @@ import Notebook from '@/models/Notebook';
 import Page from '@/models/Page';
 import { buildSessionQueue, fisherYatesShuffle } from '@/lib/shuffle';
 import { getErrorMessage } from '@/lib/api';
+import { validateSessionStartInput } from '@/lib/validation';
 import type { IPage, SessionQueueItem } from '@/types';
-import mongoose from 'mongoose';
 
 export async function POST(req: Request) {
   try {
@@ -16,16 +16,13 @@ export async function POST(req: Request) {
     }
 
     await dbConnect();
-    const { notebookId, count, mode = 'review' } = await req.json();
+    const validation = validateSessionStartInput(await req.json());
 
-    if (!count) {
-      return NextResponse.json({ error: 'Count is required' }, { status: 400 });
+    if (!validation.ok) {
+      return NextResponse.json({ error: validation.error }, { status: 400 });
     }
 
-    const limit = Number(count);
-    if (!Number.isFinite(limit) || limit <= 0) {
-      return NextResponse.json({ error: 'Count must be a positive number' }, { status: 400 });
-    }
+    const { notebookId, count: limit, mode } = validation.value;
 
     const now = new Date();
 
@@ -81,10 +78,6 @@ export async function POST(req: Request) {
     }
 
     // 2. 특정 노트북 복습
-    if (!mongoose.isValidObjectId(notebookId)) {
-      return NextResponse.json({ error: 'Invalid notebookId' }, { status: 400 });
-    }
-
     const notebook = await Notebook.findOne({ _id: notebookId, userId: session.user.id });
     if (!notebook) {
       return NextResponse.json({ error: 'Notebook not found' }, { status: 404 });

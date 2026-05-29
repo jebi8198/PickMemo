@@ -4,6 +4,7 @@ import dbConnect from '@/lib/mongodb';
 import Notebook from '@/models/Notebook';
 import Page from '@/models/Page';
 import { getErrorMessage } from '@/lib/api';
+import { validateNotebookInput } from '@/lib/validation';
 
 type LeanNotebook = {
   _id: unknown;
@@ -53,12 +54,13 @@ export async function POST(req: Request) {
     }
 
     await dbConnect();
-    const { title, description, color } = await req.json();
+    const validation = validateNotebookInput(await req.json());
 
-    if (!title) {
-      return NextResponse.json({ error: 'Title is required' }, { status: 400 });
+    if (!validation.ok) {
+      return NextResponse.json({ error: validation.error }, { status: 400 });
     }
 
+    const { title, description, color } = validation.value;
     const notebook = await Notebook.create({
       userId: session.user.id,
       title,

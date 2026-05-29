@@ -3,17 +3,18 @@ import bcrypt from 'bcryptjs';
 import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
 import { getErrorMessage } from '@/lib/api';
+import { validateRegisterInput } from '@/lib/validation';
 
 export async function POST(req: Request) {
   try {
     await dbConnect();
-    const body = await req.json();
-    const { email, password, name } = body;
+    const validation = validateRegisterInput(await req.json());
 
-    if (!email || !password || !name) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    if (!validation.ok) {
+      return NextResponse.json({ error: validation.error }, { status: 400 });
     }
 
+    const { email, password, name } = validation.value;
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return NextResponse.json({ error: 'Email already exists' }, { status: 409 });

@@ -4,6 +4,7 @@ import dbConnect from '@/lib/mongodb';
 import Notebook from '@/models/Notebook';
 import Page from '@/models/Page';
 import { getErrorMessage } from '@/lib/api';
+import { validatePagePayloads } from '@/lib/validation';
 
 interface PagePayload {
   topic?: string;
@@ -74,18 +75,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     }
 
     const body = (await req.json()) as PagesPostBody;
-    const payloads = getPayloads(body).map((page) => ({
-      topic: page.topic?.trim(),
-      description: page.description?.trim(),
-      keywords: Array.isArray(page.keywords) ? page.keywords.filter(Boolean) : [],
-      imageUrl: page.imageUrl?.trim() || undefined,
-    }));
+    const validation = validatePagePayloads(getPayloads(body));
 
-    if (payloads.length === 0 || payloads.some((page) => !page.topic || !page.description)) {
-      return NextResponse.json({ error: 'Topic and description are required' }, { status: 400 });
+    if (!validation.ok) {
+      return NextResponse.json({ error: validation.error }, { status: 400 });
     }
 
-    const documents = payloads.map((page) => ({
+    const documents = validation.value.map((page) => ({
       notebookId: id,
       userId,
       topic: page.topic,

@@ -4,6 +4,7 @@ import dbConnect from '@/lib/mongodb';
 import Page from '@/models/Page';
 import Notebook from '@/models/Notebook';
 import { getErrorMessage } from '@/lib/api';
+import { validatePagePayload } from '@/lib/validation';
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -36,11 +37,15 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const { id } = await params;
     await dbConnect();
 
-    const { topic, description, keywords, imageUrl } = await req.json();
+    const validation = validatePagePayload(await req.json());
+
+    if (!validation.ok) {
+      return NextResponse.json({ error: validation.error }, { status: 400 });
+    }
 
     const page = await Page.findOneAndUpdate(
       { _id: id, userId: session.user.id },
-      { topic, description, keywords, imageUrl },
+      validation.value,
       { new: true }
     );
 

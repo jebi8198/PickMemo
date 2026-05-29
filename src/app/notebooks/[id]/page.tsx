@@ -9,10 +9,14 @@ import { PageForm, PageFormData } from '@/components/page/PageForm';
 import { NotebookForm } from '@/components/notebook/NotebookForm';
 import { SessionSetup } from '@/components/session/SessionSetup';
 import { Header } from '@/components/layout/Header';
+import { useToast } from '@/components/providers/ToastProvider';
+import { getResponseError } from '@/lib/http';
 import styles from './page.module.css';
 
 type PageStatus = 'new' | 'learning' | 'review' | 'graduated';
 type ActiveModal = 'addPage' | 'editNotebook' | 'session' | null;
+type PageFilter = 'all' | PageStatus;
+type PageSort = 'newest' | 'oldest' | 'dueSoon' | 'topic';
 
 interface NotebookDetail {
   _id: string;
@@ -30,11 +34,15 @@ interface PageItem {
   keywords: string[];
   reviewCount: number;
   nextReviewDate: string;
+  createdAt?: string;
 }
+
+const pageSize = 24;
 
 export default function NotebookDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { showToast } = useToast();
   const notebookId = useMemo(() => {
     const id = params.id;
     return Array.isArray(id) ? id[0] : id;
@@ -48,6 +56,10 @@ export default function NotebookDetailPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [selectedPageIds, setSelectedPageIds] = useState<string[]>([]);
   const [lastSelectedPageId, setLastSelectedPageId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<PageFilter>('all');
+  const [sortMode, setSortMode] = useState<PageSort>('newest');
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     if (!notebookId) return;
@@ -75,13 +87,14 @@ export default function NotebookDetailPage() {
         setPages(pagesData.pages);
       } catch (error) {
         console.error('Failed to load notebook:', error);
+        showToast('공책 데이터를 불러오지 못했습니다.', 'error');
       } finally {
         setIsLoading(false);
       }
     }
 
     loadNotebook();
-  }, [notebookId, router]);
+  }, [notebookId, router, showToast]);
 
   const getPageStatus = (page: PageItem): PageStatus => {
     if (page.reviewCount === 0) return 'new';
@@ -95,7 +108,43 @@ export default function NotebookDetailPage() {
     () => pages.filter((page) => selectedPageIds.includes(page._id)),
     [pages, selectedPageIds]
   );
-  const isAllSelected = pages.length > 0 && selectedCount === pages.length;
+  const visiblePages = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+
+    return pages
+      .filter((page) => {
+        const statusMatches = statusFilter === 'all' || getPageStatus(page) === statusFilter;
+        if (!statusMatches) return false;
+        if (!normalizedQuery) return true;
+
+        const searchableText = [
+          page.topic,
+          page.description,
+          ...page.keywords,
+        ].join(' ').toLowerCase();
+
+        return searchableText.includes(normalizedQuery);
+      })
+      .sort((a, b) => {
+        switch (sortMode) {
+          case 'oldest':
+            return new Date(a.createdAt ?? 0).getTime() - new Date(b.createdAt ?? 0).getTime();
+          case 'dueSoon':
+            return new Date(a.nextReviewDate).getTime() - new Date(b.nextReviewDate).getTime();
+          case 'topic':
+            return a.topic.localeCompare(b.topic, 'ko');
+          case 'newest':
+          default:
+            return new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime();
+        }
+      });
+  }, [pages, searchQuery, sortMode, statusFilter]);
+  const totalPages = Math.max(1, Math.ceil(visiblePages.length / pageSize));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const pagedPages = visiblePages.slice((safeCurrentPage - 1) * pageSize, safeCurrentPage * pageSize);
+  const visiblePageIds = useMemo(() => new Set(visiblePages.map((page) => page._id)), [visiblePages]);
+  const selectedVisibleCount = selectedPageIds.filter((id) => visiblePageIds.has(id)).length;
+  const isAllVisibleSelected = visiblePages.length > 0 && selectedVisibleCount === visiblePages.length;
 
   const updateReviewDueAfterDelete = (deletedPages: PageItem[]) => {
     const deletedDueCount = deletedPages.filter((page) => new Date(page.nextReviewDate) <= new Date()).length;
@@ -109,12 +158,12 @@ export default function NotebookDetailPage() {
 
   const togglePageSelection = (pageId: string, selected: boolean, shiftKey = false) => {
     if (shiftKey && lastSelectedPageId) {
-      const startIndex = pages.findIndex((page) => page._id === lastSelectedPageId);
-      const endIndex = pages.findIndex((page) => page._id === pageId);
+      const startIndex = visiblePages.findIndex((page) => page._id === lastSelectedPageId);
+      const endIndex = visiblePages.findIndex((page) => page._id === pageId);
 
       if (startIndex !== -1 && endIndex !== -1) {
         const [from, to] = startIndex < endIndex ? [startIndex, endIndex] : [endIndex, startIndex];
-        const rangeIds = pages.slice(from, to + 1).map((page) => page._id);
+        const rangeIds = visiblePages.slice(from, to + 1).map((page) => page._id);
 
         setSelectedPageIds((current) => {
           if (selected) {
@@ -140,7 +189,11 @@ export default function NotebookDetailPage() {
   };
 
   const toggleSelectAll = () => {
-    setSelectedPageIds(isAllSelected ? [] : pages.map((page) => page._id));
+    if (isAllVisibleSelected) {
+      setSelectedPageIds((current) => current.filter((id) => !visiblePageIds.has(id)));
+    } else {
+      setSelectedPageIds((current) => Array.from(new Set([...current, ...visiblePages.map((page) => page._id)])));
+    }
     setLastSelectedPageId(null);
   };
 
@@ -154,14 +207,16 @@ export default function NotebookDetailPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
-      if (!res.ok) throw new Error('페이지를 생성하지 못했습니다.');
+      if (!res.ok) throw new Error(await getResponseError(res, '페이지를 생성하지 못했습니다.'));
       const result = (await res.json()) as { page: PageItem };
       setPages((current) => [result.page, ...current]);
       setSelectedPageIds([]);
       setLastSelectedPageId(null);
       setActiveModal(null);
+      showToast('페이지를 추가했습니다.', 'success');
     } catch (error) {
       console.error('Failed to create page:', error);
+      showToast(error instanceof Error ? error.message : '페이지를 생성하지 못했습니다.', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -176,14 +231,16 @@ export default function NotebookDetailPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pages: items }),
       });
-      if (!res.ok) throw new Error('페이지를 일괄 생성하지 못했습니다.');
+      if (!res.ok) throw new Error(await getResponseError(res, '페이지를 일괄 생성하지 못했습니다.'));
       const result = (await res.json()) as { pages: PageItem[] };
       setPages((current) => [...result.pages, ...current]);
       setSelectedPageIds([]);
       setLastSelectedPageId(null);
       setActiveModal(null);
+      showToast(`${result.pages.length}개 페이지를 추가했습니다.`, 'success');
     } catch (error) {
       console.error('Failed to create pages:', error);
+      showToast(error instanceof Error ? error.message : '페이지를 일괄 생성하지 못했습니다.', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -194,14 +251,16 @@ export default function NotebookDetailPage() {
     if (!window.confirm('이 페이지를 삭제하시겠습니까?')) return;
     try {
       const res = await fetch(`/api/pages/${pageId}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('페이지를 삭제하지 못했습니다.');
+      if (!res.ok) throw new Error(await getResponseError(res, '페이지를 삭제하지 못했습니다.'));
       const deletedPage = pages.find((page) => page._id === pageId);
       setPages((current) => current.filter((page) => page._id !== pageId));
       setSelectedPageIds((current) => current.filter((id) => id !== pageId));
       setLastSelectedPageId((current) => current === pageId ? null : current);
       if (deletedPage) updateReviewDueAfterDelete([deletedPage]);
+      showToast('페이지를 삭제했습니다.', 'success');
     } catch (error) {
       console.error('Failed to delete page:', error);
+      showToast(error instanceof Error ? error.message : '페이지를 삭제하지 못했습니다.', 'error');
     }
   };
 
@@ -217,7 +276,7 @@ export default function NotebookDetailPage() {
         body: JSON.stringify({ pageIds: selectedPages.map((page) => page._id) }),
       });
 
-      if (!res.ok) throw new Error('선택한 페이지를 삭제하지 못했습니다.');
+      if (!res.ok) throw new Error(await getResponseError(res, '선택한 페이지를 삭제하지 못했습니다.'));
 
       const result = (await res.json()) as { deletedIds?: string[] };
       const selectedIds = new Set(result.deletedIds ?? selectedPages.map((page) => page._id));
@@ -226,8 +285,10 @@ export default function NotebookDetailPage() {
       setSelectedPageIds([]);
       setLastSelectedPageId(null);
       updateReviewDueAfterDelete(deletedPages);
+      showToast(`${deletedPages.length}개 페이지를 삭제했습니다.`, 'success');
     } catch (error) {
       console.error('Failed to delete selected pages:', error);
+      showToast(error instanceof Error ? error.message : '선택한 페이지를 삭제하지 못했습니다.', 'error');
     } finally {
       setIsDeleting(false);
     }
@@ -243,12 +304,14 @@ export default function NotebookDetailPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
-      if (!res.ok) throw new Error('공책을 수정하지 못했습니다.');
+      if (!res.ok) throw new Error(await getResponseError(res, '공책을 수정하지 못했습니다.'));
       const result = (await res.json()) as { notebook: NotebookDetail };
       setNotebook(result.notebook);
       setActiveModal(null);
+      showToast('공책 정보를 수정했습니다.', 'success');
     } catch (error) {
       console.error('Failed to update notebook:', error);
+      showToast(error instanceof Error ? error.message : '공책을 수정하지 못했습니다.', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -261,10 +324,12 @@ export default function NotebookDetailPage() {
     try {
       setIsDeleting(true);
       const res = await fetch(`/api/notebooks/${notebookId}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('공책을 삭제하지 못했습니다.');
+      if (!res.ok) throw new Error(await getResponseError(res, '공책을 삭제하지 못했습니다.'));
+      showToast('공책을 삭제했습니다.', 'success');
       router.push('/dashboard');
     } catch (error) {
       console.error('Failed to delete notebook:', error);
+      showToast(error instanceof Error ? error.message : '공책을 삭제하지 못했습니다.', 'error');
       setIsDeleting(false);
     }
   };
@@ -348,14 +413,65 @@ export default function NotebookDetailPage() {
           </div>
         ) : (
           <>
+            <div className={styles.pageToolbar}>
+              <div className={styles.searchBox}>
+                <label className={styles.controlLabel} htmlFor="page-search">카드 검색</label>
+                <input
+                  id="page-search"
+                  className={styles.searchInput}
+                  value={searchQuery}
+                  onChange={(event) => {
+                    setSearchQuery(event.target.value);
+                    setCurrentPage(1);
+                  }}
+                  placeholder="주제, 답변, 키워드 검색"
+                />
+              </div>
+              <div className={styles.toolbarControl}>
+                <label className={styles.controlLabel} htmlFor="status-filter">상태</label>
+                <select
+                  id="status-filter"
+                  className={styles.select}
+                  value={statusFilter}
+                  onChange={(event) => {
+                    setStatusFilter(event.target.value as PageFilter);
+                    setCurrentPage(1);
+                  }}
+                >
+                  <option value="all">전체</option>
+                  <option value="new">새 페이지</option>
+                  <option value="learning">학습 중</option>
+                  <option value="review">복습 필요</option>
+                  <option value="graduated">마스터</option>
+                </select>
+              </div>
+              <div className={styles.toolbarControl}>
+                <label className={styles.controlLabel} htmlFor="sort-mode">정렬</label>
+                <select
+                  id="sort-mode"
+                  className={styles.select}
+                  value={sortMode}
+                  onChange={(event) => {
+                    setSortMode(event.target.value as PageSort);
+                    setCurrentPage(1);
+                  }}
+                >
+                  <option value="newest">최신순</option>
+                  <option value="oldest">오래된순</option>
+                  <option value="dueSoon">복습일 빠른순</option>
+                  <option value="topic">주제순</option>
+                </select>
+              </div>
+            </div>
+
             <div className={styles.selectionToolbar}>
               <div className={styles.selectionInfo}>
-                <strong>{selectedCount > 0 ? `${selectedCount}개 선택됨` : '페이지 선택'}</strong>
-                <span>필요한 카드를 선택해 한 번에 삭제할 수 있습니다.</span>
+                <strong>{selectedCount > 0 ? `${selectedCount}개 선택됨` : `${visiblePages.length}개 카드 표시 중`}</strong>
+                <span>검색/필터 결과를 기준으로 선택, Shift 범위 선택, 일괄 삭제할 수 있습니다.</span>
               </div>
               <div className={styles.selectionActions}>
                 <Button variant="ghost" size="sm" onClick={toggleSelectAll}>
-                  {isAllSelected ? '선택 해제' : '전체 선택'}
+                  {isAllVisibleSelected ? '표시 항목 해제' : '표시 항목 선택'}
                 </Button>
                 <Button
                   variant="danger"
@@ -368,8 +484,9 @@ export default function NotebookDetailPage() {
                 </Button>
               </div>
             </div>
-            <div className={styles.grid}>
-              {pages.map((page) => (
+            {pagedPages.length > 0 ? (
+              <div className={styles.grid}>
+                {pagedPages.map((page) => (
                 <PageCard
                   key={page._id}
                   topic={page.topic}
@@ -380,8 +497,34 @@ export default function NotebookDetailPage() {
                   onSelectChange={(selected, shiftKey) => togglePageSelection(page._id, selected, shiftKey)}
                   onDelete={() => handleDeletePage(page._id)}
                 />
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className={styles.emptyState}>
+                <p>검색 조건에 맞는 페이지가 없습니다.</p>
+              </div>
+            )}
+            {totalPages > 1 && (
+              <div className={styles.pagination}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                  disabled={safeCurrentPage === 1}
+                >
+                  이전
+                </Button>
+                <span className={styles.pageIndicator}>{safeCurrentPage} / {totalPages}</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                  disabled={safeCurrentPage === totalPages}
+                >
+                  다음
+                </Button>
+              </div>
+            )}
           </>
         )}
 
