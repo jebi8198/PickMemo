@@ -76,6 +76,26 @@ interface CurvePath {
   opacity?: number;
 }
 
+interface DetailCurve {
+  id: string;
+  topic: string;
+  status: DotPoint['status'];
+  path: string;
+  resetXs: number[];
+  currentX: number;
+  currentY: number;
+  color: string;
+  retention: number;
+  progressPercent: string;
+  nextReviewDate: Date;
+}
+
+interface DetailChart {
+  maxDays: number;
+  axisDays: number[];
+  curves: DetailCurve[];
+}
+
 interface TooltipPosition {
   x: number;
   y: number;
@@ -85,6 +105,11 @@ const MIN_STABILITY_DAYS = 0.5;
 const MIN_CHART_DAYS = 7.5;
 const DEFAULT_NOTEBOOK_COLOR = '#2563eb';
 const DASHBOARD_CURVE_COLOR = '#64748b';
+const STATUS_COLORS: Record<DotPoint['status'], string> = {
+  safe: '#16a34a',
+  warning: '#f59e0b',
+  danger: '#ef4444',
+};
 
 function getRetention(elapsedDays: number, intervalDays: number) {
   const safeElapsedDays = Math.max(0, elapsedDays);
@@ -124,6 +149,12 @@ function formatIntervalDays(day: number) {
 
 function formatProgressPercent(ratio: number) {
   return `${Math.round(Math.max(0, ratio) * 100)}%`;
+}
+
+function getStatusLabel(status: DotPoint['status']) {
+  if (status === 'danger') return '복습 필요';
+  if (status === 'warning') return '복습 임박';
+  return '안전';
 }
 
 function getAverageInterval(cards: ForgettingCurveCard[] | DotPoint[]) {
@@ -169,6 +200,78 @@ function buildCurvePath({
   return pathPoints.join(' ');
 }
 
+function buildDetailCurvePath({
+  dot,
+  maxDays,
+  chartWidth,
+  chartHeight,
+  paddingLeft,
+  paddingTop,
+  minRetention,
+  maxRetention,
+}: {
+  dot: DotPoint;
+  maxDays: number;
+  chartWidth: number;
+  chartHeight: number;
+  paddingLeft: number;
+  paddingTop: number;
+  minRetention: number;
+  maxRetention: number;
+}): DetailCurve {
+  const pathPoints: string[] = [];
+  const resetXs: number[] = [];
+  const completedReviews = Math.min(Math.max(dot.reviewCount, 0), 4);
+  const growthFactor = 2;
+  const historicalIntervals = Array.from({ length: completedReviews }, (_, index) => {
+    const divisor = Math.pow(growthFactor, completedReviews - index);
+    return Math.max(MIN_STABILITY_DAYS, dot.intervalDays / divisor);
+  });
+  const currentInterval = Math.max(MIN_STABILITY_DAYS, dot.intervalDays, dot.elapsedDays);
+  const intervals = [...historicalIntervals, currentInterval];
+  const toX = (day: number) => paddingLeft + (Math.min(day, maxDays) / maxDays) * chartWidth;
+  const toY = (retention: number) => paddingTop + chartHeight - ((Math.max(minRetention, retention) - minRetention) / (maxRetention - minRetention)) * chartHeight;
+
+  let cursor = 0;
+
+  intervals.forEach((interval, segmentIndex) => {
+    const stepSize = Math.max(0.03, interval / 36);
+
+    for (let t = 0; t <= interval; t += stepSize) {
+      const x = toX(cursor + Math.min(t, interval));
+      const y = toY(getRetention(t, interval));
+      pathPoints.push(`${segmentIndex === 0 && t === 0 ? 'M' : 'L'} ${x} ${y}`);
+    }
+
+    pathPoints.push(`L ${toX(cursor + interval)} ${toY(getRetention(interval, interval))}`);
+    cursor += interval;
+
+    if (segmentIndex < intervals.length - 1) {
+      const resetX = toX(cursor);
+      pathPoints.push(`L ${resetX} ${toY(100)}`);
+      resetXs.push(resetX);
+    }
+  });
+
+  const currentSegmentStart = intervals.slice(0, -1).reduce((sum, interval) => sum + interval, 0);
+  const currentX = toX(currentSegmentStart + dot.elapsedDays);
+  const currentY = toY(dot.retention);
+
+  return {
+    id: dot.cardId,
+    topic: dot.topic,
+    status: dot.status,
+    path: pathPoints.join(' '),
+    resetXs,
+    currentX,
+    currentY,
+    color: STATUS_COLORS[dot.status],
+    retention: dot.retention,
+    progressPercent: formatProgressPercent(dot.ratio),
+    nextReviewDate: dot.nextReviewDate,
+  };
+}
+
 export default function ForgettingCurveChart({
   cards = [],
   mode = 'dashboard',
@@ -178,6 +281,8 @@ export default function ForgettingCurveChart({
   const [hoveredCluster, setHoveredCluster] = useState<DotCluster | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState<TooltipPosition | null>(null);
   const [selectedNotebookId, setSelectedNotebookId] = useState('all');
+  const [selectedClusterId, setSelectedClusterId] = useState<string | null>(null);
+  const [selectedDetailCardId, setSelectedDetailCardId] = useState<string | null>(null);
   const svgContainerRef = useRef<HTMLDivElement | null>(null);
 
   // SVG 크기 정의
@@ -385,33 +490,116 @@ export default function ForgettingCurveChart({
     }];
   }, [averageStability, chartWidth, chartHeight, maxDays, minRetention, maxRetention, mode, notebookColor, paddingTop]);
 
+  const selectedCluster = useMemo(() => {
+    if (!selectedClusterId) return null;
+    return dotClusters.find((cluster) => cluster.id === selectedClusterId) ?? null;
+  }, [dotClusters, selectedClusterId]);
+
+  const selectedDetailDot = useMemo(() => {
+    if (!selectedCluster) return null;
+    return selectedCluster.dots.find((dot) => dot.cardId === selectedDetailCardId) ?? selectedCluster.primary;
+  }, [selectedCluster, selectedDetailCardId]);
+
+  const detailChart = useMemo<DetailChart | null>(() => {
+    if (!selectedDetailDot) return null;
+
+    const getSawtoothTotalDays = (dot: DotPoint) => {
+      const completedReviews = Math.min(Math.max(dot.reviewCount, 0), 4);
+      const historicalTotal = Array.from({ length: completedReviews }, (_, index) => {
+        const divisor = Math.pow(2, completedReviews - index);
+        return Math.max(MIN_STABILITY_DAYS, dot.intervalDays / divisor);
+      }).reduce((sum, interval) => sum + interval, 0);
+
+      return historicalTotal + Math.max(MIN_STABILITY_DAYS, dot.intervalDays, dot.elapsedDays);
+    };
+    const detailMaxDays = Math.max(
+      2,
+      Math.ceil(getSawtoothTotalDays(selectedDetailDot) * 1.1)
+    );
+
+    const curves: DetailCurve[] = [selectedDetailDot].map((dot) => ({
+      ...buildDetailCurvePath({
+        dot,
+        maxDays: detailMaxDays,
+        chartWidth,
+        chartHeight,
+        paddingLeft,
+        paddingTop,
+        minRetention,
+        maxRetention,
+      })
+    }));
+
+    return {
+      maxDays: detailMaxDays,
+      curves,
+      axisDays: [0, Math.ceil(detailMaxDays / 2), detailMaxDays],
+    };
+  }, [chartHeight, chartWidth, maxRetention, minRetention, paddingLeft, paddingTop, selectedDetailDot]);
+
   return (
     <div className={styles.chartWrapper}>
       <div className={styles.chartHeader}>
         <div className={styles.chartHeaderRow}>
-          <h2 className={styles.chartTitle}>에빙하우스 망각 곡선 분포도</h2>
-          {mode === 'dashboard' && notebookOptions.length > 0 && (
-            <select
-              className={styles.notebookSelect}
-              value={selectedNotebookId}
-              onChange={(event) => {
-                setSelectedNotebookId(event.target.value);
-                setHoveredCluster(null);
-                setTooltipPosition(null);
-              }}
-              aria-label="망각 곡선 노트북 필터"
-            >
-              <option value="all">전체 평균</option>
-              {notebookOptions.map((notebook) => (
-                <option key={notebook.id} value={notebook.id}>
-                  {notebook.title}
-                </option>
-              ))}
-            </select>
-          )}
+          <h2 className={styles.chartTitle}>
+            {selectedCluster
+              ? `${selectedDetailDot?.topic ?? selectedCluster.primary.topic} 복습 곡선`
+              : '에빙하우스 망각 곡선 분포도'}
+          </h2>
+          <div className={styles.chartHeaderControls}>
+            {selectedCluster && selectedCluster.count > 1 && (
+              <select
+                className={styles.notebookSelect}
+                value={selectedDetailDot?.cardId ?? selectedCluster.primary.cardId}
+                onChange={(event) => setSelectedDetailCardId(event.target.value)}
+                aria-label="상세 복습 곡선 카드 선택"
+              >
+                {selectedCluster.dots.map((dot) => (
+                  <option key={dot.cardId} value={dot.cardId}>
+                    {dot.topic}
+                  </option>
+                ))}
+              </select>
+            )}
+            {!selectedCluster && mode === 'dashboard' && notebookOptions.length > 0 && (
+              <select
+                className={styles.notebookSelect}
+                value={selectedNotebookId}
+                onChange={(event) => {
+                  setSelectedNotebookId(event.target.value);
+                  setHoveredCluster(null);
+                  setTooltipPosition(null);
+                  setSelectedClusterId(null);
+                  setSelectedDetailCardId(null);
+                }}
+                aria-label="망각 곡선 노트북 필터"
+              >
+                <option value="all">전체 평균</option>
+                {notebookOptions.map((notebook) => (
+                  <option key={notebook.id} value={notebook.id}>
+                    {notebook.title}
+                  </option>
+                ))}
+              </select>
+            )}
+            {selectedCluster && (
+              <button
+                type="button"
+                className={styles.chartModeButton}
+                onClick={() => {
+                  setSelectedClusterId(null);
+                  setSelectedDetailCardId(null);
+                }}
+              >
+                전체 보기
+              </button>
+            )}
+          </div>
         </div>
         <p className={styles.chartSubtitle}>
-          배경선은 평균 기억 유지율 기준선이며, 점의 색은 실제 다음 복습일 기준 상태입니다.
+          {selectedCluster
+            ? '선택한 카드의 복습 이력을 현재 데이터로 근사해, 복습 시점마다 100%로 회복되는 톱니형 곡선으로 표시합니다.'
+            : '배경선은 평균 기억 유지율 기준선이며, 점의 색은 실제 다음 복습일 기준 상태입니다.'}
         </p>
       </div>
 
@@ -431,134 +619,244 @@ export default function ForgettingCurveChart({
             </clipPath>
           </defs>
 
-          {/* ── 수평 그리드 및 가이드 라인 ── */}
-          {Array.from({ length: 5 }).map((_, idx) => {
-            const retentionValue = minRetention + idx * 20; // 20, 40, 60, 80, 100
-            const y = paddingTop + chartHeight - (idx * 20 / (maxRetention - minRetention)) * chartHeight;
-            return (
-              <g key={retentionValue}>
-                <line
-                  x1={paddingLeft}
-                  y1={y}
-                  x2={paddingLeft + chartWidth}
-                  y2={y}
-                  className={retentionValue === 80 || retentionValue === 70 ? styles.criticalGridLine : styles.gridLine}
-                />
-                <text x={paddingLeft - 10} y={y + 4} textAnchor="end" className={styles.axisText}>
-                  {retentionValue}%
-                </text>
-              </g>
-            );
-          })}
+          {selectedCluster && detailChart ? (
+            <>
+              {[40, 70, 100].map((retentionValue) => {
+                const y = paddingTop + chartHeight - ((retentionValue - minRetention) / (maxRetention - minRetention)) * chartHeight;
+                return (
+                  <g key={retentionValue}>
+                    <line
+                      x1={paddingLeft}
+                      y1={y}
+                      x2={paddingLeft + chartWidth}
+                      y2={y}
+                      className={styles.gridLine}
+                    />
+                    <text x={paddingLeft - 10} y={y + 4} textAnchor="end" className={styles.axisText}>
+                      {retentionValue}%
+                    </text>
+                  </g>
+                );
+              })}
 
-          {/* ── 수직 그리드 ── */}
-          {xAxisDays.map((day) => {
-            const x = paddingLeft + (day / maxDays) * chartWidth;
-            return (
-              <g key={day}>
-                <line
-                  x1={x}
-                  y1={paddingTop}
-                  x2={x}
-                  y2={paddingTop + chartHeight}
-                  className={styles.gridLine}
-                />
-                <text x={x} y={paddingTop + chartHeight + 15} textAnchor="middle" className={styles.axisText}>
-                  {formatAxisDay(day)}일
-                </text>
-              </g>
-            );
-          })}
+              {detailChart.axisDays.map((day) => {
+                const x = paddingLeft + (day / detailChart.maxDays) * chartWidth;
+                return (
+                  <g key={day}>
+                    <line
+                      x1={x}
+                      y1={paddingTop}
+                      x2={x}
+                      y2={paddingTop + chartHeight}
+                      className={styles.gridLine}
+                    />
+                    <text x={x} y={paddingTop + chartHeight + 15} textAnchor="middle" className={styles.axisText}>
+                      {formatAxisDay(day)}일
+                    </text>
+                  </g>
+                );
+              })}
 
-          {/* X/Y축 기본 테두리 */}
-          <line
-            x1={paddingLeft}
-            y1={paddingTop}
-            x2={paddingLeft}
-            y2={paddingTop + chartHeight}
-            stroke="var(--border-default)"
-            strokeWidth="1"
-          />
-          <line
-            x1={paddingLeft}
-            y1={paddingTop + chartHeight}
-            x2={paddingLeft + chartWidth}
-            y2={paddingTop + chartHeight}
-            stroke="var(--border-default)"
-            strokeWidth="1"
-          />
-
-          {/* ── 메인 망각 곡선 패스 (차트 경계 내로 클리핑) ── */}
-          <g clipPath="url(#chartClip)">
-            {curvesToRender.map((curve) => (
-              <path
-                key={curve.id}
-                d={curve.path}
-                fill="none"
-                stroke={curve.color ?? DASHBOARD_CURVE_COLOR}
-                strokeWidth={mode === 'notebook' ? '3' : '3.5'}
-                strokeOpacity={curve.opacity ?? 1}
-                className={styles.mainCurve}
+              <line
+                x1={paddingLeft}
+                y1={paddingTop}
+                x2={paddingLeft}
+                y2={paddingTop + chartHeight}
+                stroke="var(--border-default)"
+                strokeWidth="1"
               />
-            ))}
-          </g>
+              <line
+                x1={paddingLeft}
+                y1={paddingTop + chartHeight}
+                x2={paddingLeft + chartWidth}
+                y2={paddingTop + chartHeight}
+                stroke="var(--border-default)"
+                strokeWidth="1"
+              />
 
-          {/* ── 모든 카드 점(Dot) 렌더링 ── */}
-          {dotClusters.map((cluster) => {
-            const isHovered = hoveredCluster?.id === cluster.id;
-            return (
-              <g
-                key={cluster.id}
-                className={styles.dotGroup}
-                onMouseEnter={(event) => {
-                  setHoveredCluster(cluster);
-                  updateTooltipPosition(event.clientX, event.clientY);
-                }}
-                onMouseMove={(event) => updateTooltipPosition(event.clientX, event.clientY)}
-                onMouseLeave={() => {
-                  setHoveredCluster(null);
-                  setTooltipPosition(null);
-                }}
-                onTouchStart={(event) => {
-                  const touch = event.touches[0];
-                  if (!touch) return;
-                  setHoveredCluster(cluster);
-                  updateTooltipPosition(touch.clientX, touch.clientY);
-                }}
-                onTouchMove={(event) => {
-                  const touch = event.touches[0];
-                  if (!touch) return;
-                  updateTooltipPosition(touch.clientX, touch.clientY);
-                }}
-                onTouchEnd={() => {
-                  setHoveredCluster(null);
-                  setTooltipPosition(null);
-                }}
-              >
-                {/* 글로우 백그라운드 링 */}
-                <circle
-                  cx={cluster.cx}
-                  cy={cluster.cy}
-                  r={isHovered ? 12 : cluster.kind === 'notebook' ? 9 : 7}
-                  className={`${styles.dotGlow} ${styles[cluster.status]}`}
-                />
-                {/* 핵심 센터 서클 */}
-                <circle
-                  cx={cluster.cx}
-                  cy={cluster.cy}
-                  r={isHovered ? 6 : cluster.kind === 'notebook' ? 5 : 4}
-                  className={`${styles.dotCore} ${styles[cluster.status]}`}
-                  stroke="#ffffff"
-                  strokeWidth="1.5"
-                />
-                {cluster.kind === 'notebook' && (
-                  <text x={cluster.cx + 9} y={cluster.cy - 9} className={styles.groupCount}>
-                    {cluster.count}
-                  </text>
-                )}
+              <g clipPath="url(#chartClip)">
+                {detailChart.curves.map((curve) => (
+                  <g key={curve.id}>
+                    {curve.resetXs.map((x) => (
+                      <line
+                        key={`${curve.id}-${x}`}
+                        x1={x}
+                        y1={paddingTop}
+                        x2={x}
+                        y2={paddingTop + chartHeight}
+                        className={styles.reviewMarker}
+                        stroke={curve.color}
+                      />
+                    ))}
+                    <path
+                      d={curve.path}
+                      fill="none"
+                      stroke={curve.color}
+                      strokeWidth={selectedCluster.kind === 'notebook' ? '2.2' : '3'}
+                      strokeOpacity={selectedCluster.kind === 'notebook' ? 0.5 : 0.9}
+                      className={styles.detailCurve}
+                    />
+                    <circle
+                      cx={curve.currentX}
+                      cy={curve.currentY}
+                      r={selectedCluster.kind === 'notebook' ? 4 : 5}
+                      fill={curve.color}
+                      stroke="#ffffff"
+                      strokeWidth="1.5"
+                    />
+                  </g>
+                ))}
               </g>
-            );
-          })}
+
+              <text x={paddingLeft} y={paddingTop + 14} className={styles.detailInlineText}>
+                {selectedDetailDot
+                  ? `${getStatusLabel(selectedDetailDot.status)} · 다음 복습일 ${formatDisplayDate(selectedDetailDot.nextReviewDate)}`
+                  : `${getStatusLabel(selectedCluster.status)} · 다음 복습일 ${formatDisplayDate(selectedCluster.nextReviewDate)}`}
+              </text>
+              {selectedCluster.count > 1 && (
+                <text x={paddingLeft} y={paddingTop + 30} className={styles.detailInlineSubText}>
+                  묶인 카드 {selectedCluster.count}개 중 1개 표시 중
+                </text>
+              )}
+            </>
+          ) : (
+            <>
+              {/* ── 수평 그리드 및 가이드 라인 ── */}
+              {Array.from({ length: 5 }).map((_, idx) => {
+                const retentionValue = minRetention + idx * 20; // 20, 40, 60, 80, 100
+                const y = paddingTop + chartHeight - (idx * 20 / (maxRetention - minRetention)) * chartHeight;
+                return (
+                  <g key={retentionValue}>
+                    <line
+                      x1={paddingLeft}
+                      y1={y}
+                      x2={paddingLeft + chartWidth}
+                      y2={y}
+                      className={retentionValue === 80 || retentionValue === 70 ? styles.criticalGridLine : styles.gridLine}
+                    />
+                    <text x={paddingLeft - 10} y={y + 4} textAnchor="end" className={styles.axisText}>
+                      {retentionValue}%
+                    </text>
+                  </g>
+                );
+              })}
+
+              {/* ── 수직 그리드 ── */}
+              {xAxisDays.map((day) => {
+                const x = paddingLeft + (day / maxDays) * chartWidth;
+                return (
+                  <g key={day}>
+                    <line
+                      x1={x}
+                      y1={paddingTop}
+                      x2={x}
+                      y2={paddingTop + chartHeight}
+                      className={styles.gridLine}
+                    />
+                    <text x={x} y={paddingTop + chartHeight + 15} textAnchor="middle" className={styles.axisText}>
+                      {formatAxisDay(day)}일
+                    </text>
+                  </g>
+                );
+              })}
+
+              {/* X/Y축 기본 테두리 */}
+              <line
+                x1={paddingLeft}
+                y1={paddingTop}
+                x2={paddingLeft}
+                y2={paddingTop + chartHeight}
+                stroke="var(--border-default)"
+                strokeWidth="1"
+              />
+              <line
+                x1={paddingLeft}
+                y1={paddingTop + chartHeight}
+                x2={paddingLeft + chartWidth}
+                y2={paddingTop + chartHeight}
+                stroke="var(--border-default)"
+                strokeWidth="1"
+              />
+
+              {/* ── 메인 망각 곡선 패스 (차트 경계 내로 클리핑) ── */}
+              <g clipPath="url(#chartClip)">
+                {curvesToRender.map((curve) => (
+                  <path
+                    key={curve.id}
+                    d={curve.path}
+                    fill="none"
+                    stroke={curve.color ?? DASHBOARD_CURVE_COLOR}
+                    strokeWidth={mode === 'notebook' ? '3' : '3.5'}
+                    strokeOpacity={curve.opacity ?? 1}
+                    className={styles.mainCurve}
+                  />
+                ))}
+              </g>
+
+              {/* ── 모든 카드 점(Dot) 렌더링 ── */}
+              {dotClusters.map((cluster) => {
+                const isHovered = hoveredCluster?.id === cluster.id;
+                return (
+                  <g
+                    key={cluster.id}
+                    className={styles.dotGroup}
+                    onMouseEnter={(event) => {
+                      setHoveredCluster(cluster);
+                      updateTooltipPosition(event.clientX, event.clientY);
+                    }}
+                    onClick={() => {
+                      setSelectedClusterId(cluster.id);
+                      setSelectedDetailCardId(cluster.primary.cardId);
+                      setHoveredCluster(null);
+                      setTooltipPosition(null);
+                    }}
+                    onMouseMove={(event) => updateTooltipPosition(event.clientX, event.clientY)}
+                    onMouseLeave={() => {
+                      setHoveredCluster(null);
+                      setTooltipPosition(null);
+                    }}
+                    onTouchStart={(event) => {
+                      const touch = event.touches[0];
+                      if (!touch) return;
+                      setHoveredCluster(cluster);
+                      updateTooltipPosition(touch.clientX, touch.clientY);
+                    }}
+                    onTouchMove={(event) => {
+                      const touch = event.touches[0];
+                      if (!touch) return;
+                      updateTooltipPosition(touch.clientX, touch.clientY);
+                    }}
+                    onTouchEnd={() => {
+                      setHoveredCluster(null);
+                      setTooltipPosition(null);
+                    }}
+                  >
+                    {/* 글로우 백그라운드 링 */}
+                    <circle
+                      cx={cluster.cx}
+                      cy={cluster.cy}
+                      r={isHovered ? 12 : cluster.kind === 'notebook' ? 9 : 7}
+                      className={`${styles.dotGlow} ${styles[cluster.status]}`}
+                    />
+                    {/* 핵심 센터 서클 */}
+                    <circle
+                      cx={cluster.cx}
+                      cy={cluster.cy}
+                      r={isHovered ? 6 : cluster.kind === 'notebook' ? 5 : 4}
+                      className={`${styles.dotCore} ${styles[cluster.status]}`}
+                      stroke="#ffffff"
+                      strokeWidth="1.5"
+                    />
+                    {cluster.kind === 'notebook' && (
+                      <text x={cluster.cx + 9} y={cluster.cy - 9} className={styles.groupCount}>
+                        {cluster.count}
+                      </text>
+                    )}
+                  </g>
+                );
+              })}
+            </>
+          )}
         </svg>
 
         {/* ── 툴팁 (Tooltip) ── */}
@@ -648,6 +946,7 @@ export default function ForgettingCurveChart({
           </div>
         )}
       </div>
+
     </div>
   );
 }

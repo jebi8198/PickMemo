@@ -27,11 +27,20 @@
   margin-bottom: var(--space-1);
 }
 
+.chartHeaderControls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
 .chartTitle {
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-bold);
   color: var(--text-primary);
   margin: 0;
+  min-width: 0;
 }
 
 .chartSubtitle {
@@ -56,6 +65,22 @@
   border-color: var(--color-primary-500);
   box-shadow: 0 0 0 3px rgba(62, 99, 221, 0.12);
   outline: none;
+}
+
+.chartModeButton {
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: #ffffff;
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  padding: 0.55rem 0.75rem;
+}
+
+.chartModeButton:hover {
+  border-color: var(--color-primary-500);
+  box-shadow: 0 0 0 3px rgba(62, 99, 221, 0.1);
 }
 
 .svgContainer {
@@ -252,6 +277,36 @@
   box-shadow: 0 0 6px var(--color-danger);
 }
 
+.detailCurve {
+  stroke-linecap: round;
+}
+
+.reviewMarker {
+  stroke-dasharray: 4, 4;
+  stroke-width: 1;
+  opacity: 0.55;
+}
+
+.detailInlineText {
+  fill: var(--text-primary);
+  font-size: 11px;
+  font-weight: var(--font-weight-bold);
+  paint-order: stroke;
+  stroke: rgba(255, 255, 255, 0.9);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+
+.detailInlineSubText {
+  fill: var(--text-tertiary);
+  font-size: 10px;
+  font-weight: var(--font-weight-medium);
+  paint-order: stroke;
+  stroke: rgba(255, 255, 255, 0.9);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+
 @media (max-width: 640px) {
   .chartHeaderRow {
     align-items: stretch;
@@ -259,8 +314,18 @@
     gap: var(--space-2);
   }
 
+  .chartHeaderControls {
+    align-items: stretch;
+    flex-direction: column;
+    width: 100%;
+  }
+
   .notebookSelect {
     max-width: none;
+    width: 100%;
+  }
+
+  .chartModeButton {
     width: 100%;
   }
 
