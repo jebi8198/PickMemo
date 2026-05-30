@@ -54,12 +54,48 @@
   margin: 0;
 }
 
+.dateMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin: var(--space-3) 0 0;
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+}
+
+.dateMeta div {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.dateMeta dt,
+.dateMeta dd {
+  margin: 0;
+}
+
+.dateMeta dt {
+  font-weight: var(--font-weight-bold);
+}
+
+.dateMeta dd {
+  font-variant-numeric: tabular-nums;
+}
+
 /* ── 액션 버튼 그룹 ── */
 .actions {
   display: flex;
   gap: var(--space-2);
   flex-wrap: wrap;
   align-items: center;
+}
+
+.curveSection {
+  margin-bottom: var(--space-6);
+}
+
+.curveSection > * {
+  margin-bottom: 0;
 }
 
 .pageToolbar {

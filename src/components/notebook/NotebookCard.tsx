@@ -3,6 +3,7 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
+import { formatDisplayDate } from '@/lib/date';
 import styles from './NotebookCard.module.css';
 
 interface NotebookCardProps {
@@ -11,6 +12,8 @@ interface NotebookCardProps {
   description?: string;
   color: string;
   reviewCount?: number;
+  createdAt?: string | Date;
+  lastStudiedAt?: string | Date | null;
   onStartSession?: () => void;
 }
 
@@ -20,6 +23,8 @@ export const NotebookCard: React.FC<NotebookCardProps> = ({
   description,
   color,
   reviewCount = 0,
+  createdAt,
+  lastStudiedAt,
   onStartSession,
 }) => {
   const router = useRouter();
@@ -56,6 +61,16 @@ export const NotebookCard: React.FC<NotebookCardProps> = ({
             </div>
 
             <div className={styles.actionRow}>
+              <dl className={styles.dateList}>
+                <div>
+                  <dt>생성일</dt>
+                  <dd>{formatDisplayDate(createdAt)}</dd>
+                </div>
+                <div>
+                  <dt>마지막 학습</dt>
+                  <dd>{formatDisplayDate(lastStudiedAt)}</dd>
+                </div>
+              </dl>
               <Button
                 variant="primary"
                 size="sm"
@@ -75,4 +90,3 @@ export const NotebookCard: React.FC<NotebookCardProps> = ({
     </div>
   );
 };
-

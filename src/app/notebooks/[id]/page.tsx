@@ -12,6 +12,8 @@ import { Header } from '@/components/layout/Header';
 import { useConfirm } from '@/components/providers/ConfirmProvider';
 import { useToast } from '@/components/providers/ToastProvider';
 import { getResponseError } from '@/lib/http';
+import { formatDisplayDate } from '@/lib/date';
+import ForgettingCurveChart, { ForgettingCurveCard } from '@/components/dashboard/ForgettingCurveChart';
 import styles from './page.module.css';
 
 type PageStatus = 'new' | 'learning' | 'review' | 'graduated';
@@ -26,6 +28,8 @@ interface NotebookDetail {
   color: string;
   pageCount: number;
   reviewDueCount: number;
+  createdAt?: string;
+  lastStudiedAt?: string | null;
 }
 
 interface PageItem {
@@ -36,6 +40,9 @@ interface PageItem {
   reviewCount: number;
   nextReviewDate: string;
   createdAt?: string;
+  lastReviewedAt?: string | null;
+  intervalDays?: number;
+  difficultyWeight?: number;
 }
 
 const pageSize = 24;
@@ -363,6 +370,19 @@ export default function NotebookDetailPage() {
   const notebookOption = notebook
     ? [{ id: notebook._id, title: notebook.title, reviewCount: notebook.reviewDueCount ?? 0, pageCount: pages.length }]
     : [];
+  const chartCards = useMemo<ForgettingCurveCard[]>(() => pages.map((page) => ({
+    _id: page._id,
+    notebookId: notebook?._id,
+    notebookTitle: notebook?.title,
+    topic: page.topic,
+    lastReviewedAt: page.lastReviewedAt ?? undefined,
+    nextReviewDate: page.nextReviewDate,
+    intervalDays: page.intervalDays ?? 0,
+    createdAt: page.createdAt ?? new Date().toISOString(),
+    difficultyWeight: page.difficultyWeight ?? 1,
+    reviewCount: page.reviewCount,
+  })), [pages, notebook]);
+  const shouldShowCurve = pages.length > 0 && pages.some((page) => page.reviewCount > 0);
 
   if (isLoading) {
     return (
@@ -403,6 +423,16 @@ export default function NotebookDetailPage() {
               <p className={styles.meta}>
                 총 {pages.length}장 · 복습 대기 {notebook.reviewDueCount ?? 0}장
               </p>
+              <dl className={styles.dateMeta}>
+                <div>
+                  <dt>공책 생성일</dt>
+                  <dd>{formatDisplayDate(notebook.createdAt)}</dd>
+                </div>
+                <div>
+                  <dt>마지막 학습일</dt>
+                  <dd>{formatDisplayDate(notebook.lastStudiedAt)}</dd>
+                </div>
+              </dl>
             </div>
           </div>
 
@@ -421,6 +451,17 @@ export default function NotebookDetailPage() {
             </Button>
           </div>
         </div>
+
+        {/* ── 망각 곡선 섹션 ── */}
+        {shouldShowCurve && (
+          <section className={styles.curveSection}>
+            <ForgettingCurveChart
+              cards={chartCards}
+              mode="notebook"
+              notebookColor={notebook.color}
+            />
+          </section>
+        )}
 
         {/* ── 페이지 그리드 ── */}
         {pages.length === 0 ? (
@@ -512,6 +553,8 @@ export default function NotebookDetailPage() {
                   topic={page.topic}
                   keywords={page.keywords}
                   status={getPageStatus(page)}
+                  createdAt={page.createdAt}
+                  lastReviewedAt={page.lastReviewedAt}
                   selected={selectedPageIds.includes(page._id)}
                   selectionVisible={selectedCount > 0}
                   onSelectChange={(selected, shiftKey) => togglePageSelection(page._id, selected, shiftKey)}

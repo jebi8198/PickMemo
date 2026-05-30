@@ -15,13 +15,34 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
     const { id } = await params;
     await dbConnect();
-    const notebook = await Notebook.findOne({ _id: id, userId: session.user.id });
+    const notebook = await Notebook.findOne({ _id: id, userId: session.user.id }).lean();
 
     if (!notebook) {
       return NextResponse.json({ error: 'Notebook not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ notebook }, { status: 200 });
+    const now = new Date();
+    const [pageCount, reviewDueCount, lastReviewedPage] = await Promise.all([
+      Page.countDocuments({ notebookId: id, userId: session.user.id }),
+      Page.countDocuments({ notebookId: id, userId: session.user.id, nextReviewDate: { $lte: now } }),
+      Page.findOne({
+        notebookId: id,
+        userId: session.user.id,
+        lastReviewedAt: { $exists: true },
+      })
+        .sort({ lastReviewedAt: -1 })
+        .select('lastReviewedAt')
+        .lean(),
+    ]);
+
+    return NextResponse.json({
+      notebook: {
+        ...notebook,
+        pageCount,
+        reviewDueCount,
+        lastStudiedAt: lastReviewedPage?.lastReviewedAt,
+      },
+    }, { status: 200 });
   } catch (error: unknown) {
     return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }

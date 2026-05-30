@@ -27,16 +27,32 @@ export async function GET() {
     }
 
     await dbConnect();
-    const notebooks = await Notebook.find({ userId: session.user.id }).lean();
+    const userId = session.user.id;
+    const notebooks = await Notebook.find({ userId }).lean();
     
     const now = new Date();
     const notebooksWithDue = await Promise.all(
       (notebooks as LeanNotebook[]).map(async (notebook) => {
-        const reviewDueCount = await Page.countDocuments({
-          notebookId: notebook._id,
-          nextReviewDate: { $lte: now },
-        });
-        return { ...notebook, reviewDueCount };
+        const [pageCount, reviewDueCount, lastReviewedPage] = await Promise.all([
+          Page.countDocuments({
+            notebookId: notebook._id,
+            userId,
+          }),
+          Page.countDocuments({
+            notebookId: notebook._id,
+            userId,
+            nextReviewDate: { $lte: now },
+          }),
+          Page.findOne({
+            notebookId: notebook._id,
+            userId,
+            lastReviewedAt: { $exists: true },
+          })
+            .sort({ lastReviewedAt: -1 })
+            .select('lastReviewedAt')
+            .lean(),
+        ]);
+        return { ...notebook, pageCount, reviewDueCount, lastStudiedAt: lastReviewedPage?.lastReviewedAt };
       })
     );
 

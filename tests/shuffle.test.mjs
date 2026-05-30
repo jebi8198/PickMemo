@@ -42,14 +42,14 @@ test('buildSessionQueue prioritizes due pages before future pages', () => {
   assert.ok(ids.has('due-b'));
 });
 
-test('buildSessionQueue fills with future pages when due pages are insufficient', () => {
+test('buildSessionQueue does not include future pages in review mode', () => {
   const due = makePage('due', -1);
   const future = makePage('future', 3);
 
   const queue = buildSessionQueue([future, due], 2);
   const ids = new Set(queue.map((page) => page._id));
 
-  assert.equal(queue.length, 2);
+  assert.equal(queue.length, 1);
   assert.ok(ids.has('due'));
-  assert.ok(ids.has('future'));
+  assert.equal(ids.has('future'), false);
 });

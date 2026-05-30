@@ -23,8 +23,16 @@
 
 .header {
   display: flex;
-  align-items: flex-start;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.statusRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 0.75rem;
+  min-height: 1.5rem;
 }
 
 .selectControl {
@@ -33,7 +41,6 @@
   flex: 0 0 auto;
   width: 1.25rem;
   height: 1.25rem;
-  margin-top: 0.125rem;
   cursor: pointer;
   opacity: 0;
   pointer-events: none;
@@ -82,15 +89,6 @@
   transform: rotate(45deg);
 }
 
-.titleBlock {
-  display: flex;
-  flex: 1;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 1rem;
-  min-width: 0;
-}
-
 .topic {
   margin: 0;
   font-size: 1.125rem;
@@ -113,11 +111,60 @@
   border-radius: 4px;
 }
 
+.dateList {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0;
+  min-width: 0;
+}
+
+.dateList div {
+  display: flex;
+  gap: 0.45rem;
+  color: #6f6258;
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.dateList dt,
+.dateList dd {
+  margin: 0;
+}
+
+.dateList dt {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.dateList dd {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 .actions {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: flex-end;
   gap: 0.5rem;
   margin-top: auto;
   border-top: 1px dashed #e5e0d8;
-  padding-top: 1rem;
+  padding-top: 0.85rem;
+}
+
+.buttonGroup {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex: 0 0 auto;
+}
+
+@media (max-width: 420px) {
+  .actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .buttonGroup {
+    justify-content: flex-end;
+  }
 }

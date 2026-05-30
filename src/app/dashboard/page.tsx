@@ -11,7 +11,7 @@ import { SessionSetup } from '@/components/session/SessionSetup';
 import { Header } from '@/components/layout/Header';
 import { useToast } from '@/components/providers/ToastProvider';
 import { getResponseError } from '@/lib/http';
-import ForgettingCurveChart, { ForgettingCurveCard } from '@/components/dashboard/ForgettingCurveChart';
+import ForgettingCurveChart, { ForgettingCurveCard, NotebookOption } from '@/components/dashboard/ForgettingCurveChart';
 import styles from './page.module.css';
 
 interface INotebook {
@@ -21,6 +21,8 @@ interface INotebook {
   color: string;
   pageCount: number;
   reviewDueCount: number;
+  createdAt?: string;
+  lastStudiedAt?: string | null;
 }
 
 interface IUserStats {
@@ -168,6 +170,12 @@ export default function DashboardPage() {
     reviewCount: nb.reviewDueCount ?? 0,
     pageCount: nb.pageCount ?? 0,
   }));
+  const chartNotebookOptions = useMemo<NotebookOption[]>(() => notebooks.map((nb) => ({
+    id: nb._id,
+    title: nb.title,
+    color: nb.color,
+  })), [notebooks]);
+
   const visibleNotebooks = useMemo(() => {
     const query = notebookSearch.trim().toLowerCase();
 
@@ -184,7 +192,7 @@ export default function DashboardPage() {
             return (b.reviewDueCount ?? 0) - (a.reviewDueCount ?? 0);
           case 'recent':
           default:
-            return 0;
+            return new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime();
         }
       });
   }, [notebookSearch, notebookSort, notebooks]);
@@ -277,7 +285,11 @@ export default function DashboardPage() {
       {/* ── 망각 곡선 차트 ── */}
       {stats?.pages && stats.pages.length > 0 && (
         <section className={styles.chartSection}>
-          <ForgettingCurveChart cards={stats.pages} />
+          <ForgettingCurveChart
+            cards={stats.pages}
+            mode="dashboard"
+            notebookOptions={chartNotebookOptions}
+          />
         </section>
       )}
 
@@ -329,6 +341,8 @@ export default function DashboardPage() {
                 description={nb.description}
                 color={nb.color}
                 reviewCount={nb.reviewDueCount}
+                createdAt={nb.createdAt}
+                lastStudiedAt={nb.lastStudiedAt}
                 onStartSession={() => {
                   setSessionNotebookId(nb._id);
                   setActiveModal('session');
