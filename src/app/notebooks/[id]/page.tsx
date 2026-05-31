@@ -30,6 +30,7 @@ interface NotebookDetail {
   reviewDueCount: number;
   createdAt?: string;
   lastStudiedAt?: string | null;
+  isPublic?: boolean;
 }
 
 interface PageItem {
@@ -60,6 +61,7 @@ export default function NotebookDetailPage() {
 
   const [activeModal, setActiveModal] = useState<ActiveModal>(null);
   const [notebook, setNotebook] = useState<NotebookDetail | null>(null);
+  const [isPublic, setIsPublic] = useState(false);
   const [pages, setPages] = useState<PageItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -94,6 +96,7 @@ export default function NotebookDetailPage() {
         const notebookData = (await notebookRes.json()) as { notebook: NotebookDetail };
         const pagesData = (await pagesRes.json()) as { pages: PageItem[] };
         setNotebook(notebookData.notebook);
+        setIsPublic(notebookData.notebook.isPublic ?? false);
         setPages(pagesData.pages);
       } catch (error) {
         console.error('Failed to load notebook:', error);
@@ -418,7 +421,23 @@ export default function NotebookDetailPage() {
           <div className={styles.titleInfo}>
             <div className={styles.colorBadge} style={{ backgroundColor: notebook.color }} />
             <div>
-              <h1 className={styles.title}>{notebook.title}</h1>
+              <h1 className={styles.title}>
+                {notebook.title}
+                {isPublic && (
+                  <span style={{
+                    marginLeft: '0.5rem',
+                    fontSize: 'var(--font-size-xs)',
+                    fontWeight: 'var(--font-weight-medium)',
+                    background: 'var(--color-success-dim)',
+                    color: 'var(--color-success)',
+                    borderRadius: 'var(--radius-full)',
+                    padding: '2px 10px',
+                    verticalAlign: 'middle',
+                  }}>
+                    공유 중
+                  </span>
+                )}
+              </h1>
               {notebook.description && (
                 <p className={styles.description}>{notebook.description}</p>
               )}
@@ -445,6 +464,39 @@ export default function NotebookDetailPage() {
             <Button variant="danger" onClick={handleDeleteNotebook} loading={isDeleting}>
               🗑️ 삭제
             </Button>
+            <Button
+              variant="ghost"
+              onClick={async () => {
+                try {
+                  const res = await fetch(`/api/notebooks/${notebookId}/share`, { method: 'PATCH' });
+                  if (!res.ok) throw new Error('공유 설정을 변경하지 못했습니다.');
+                  const data = (await res.json()) as { isPublic: boolean };
+                  setIsPublic(data.isPublic);
+                  showToast(data.isPublic ? '공책을 공유했습니다.' : '공책을 비공개로 전환했습니다.', 'success');
+                } catch (error) {
+                  showToast(error instanceof Error ? error.message : '공유 설정을 변경하지 못했습니다.', 'error');
+                }
+              }}
+            >
+              {isPublic ? '🔒 비공개' : '🔗 공유'}
+            </Button>
+            {isPublic && (
+              <Button
+                variant="ghost"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(
+                      window.location.origin + '/notebooks/' + notebookId + '/shared'
+                    );
+                    showToast('링크를 클립보드에 복사했습니다.', 'success');
+                  } catch {
+                    showToast('링크 복사에 실패했습니다.', 'error');
+                  }
+                }}
+              >
+                🔗 링크 복사
+              </Button>
+            )}
             <Button variant="secondary" onClick={() => setActiveModal('addPage')}>
               ➕ 페이지 추가
             </Button>

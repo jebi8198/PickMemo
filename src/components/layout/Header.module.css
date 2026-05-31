@@ -44,6 +44,15 @@
   color: #8b5e3c;
 }
 
+.navDivider {
+  display: inline-block;
+  width: 1px;
+  height: 14px;
+  background: #d6cfc7;
+  border-radius: 1px;
+  flex-shrink: 0;
+}
+
 .userMenu {
   display: flex;
   align-items: center;

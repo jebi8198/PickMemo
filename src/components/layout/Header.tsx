@@ -21,6 +21,10 @@ export const Header = () => {
           <Link href="/dashboard" className={styles.navLink}>
             대시보드
           </Link>
+          <span className={styles.navDivider} aria-hidden="true" />
+          <Link href="/learn/forgetting-curve" className={styles.navLink}>
+            망각 곡선이란
+          </Link>
         </nav>
 
         <div className={styles.userMenu}>

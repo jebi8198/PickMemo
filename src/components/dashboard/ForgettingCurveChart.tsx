@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useRef } from 'react';
+import Link from 'next/link';
 import { formatDisplayDate } from '@/lib/date';
 import styles from './ForgettingCurveChart.module.css';
 
@@ -808,7 +809,19 @@ export default function ForgettingCurveChart({
           <h2 className={styles.chartTitle}>
             {selectedCluster
               ? `${selectedCluster.kind === 'notebook' ? selectedCluster.notebookTitle : selectedCluster.primary.topic} 복습 곡선`
-              : '에빙하우스 망각 곡선 분포도'}
+              : (
+                <>
+                  에빙하우스 망각 곡선 분포도
+                  <Link
+                    href="/learn/forgetting-curve"
+                    className={styles.helpLink}
+                    title="망각 곡선이란?"
+                    aria-label="망각 곡선 설명 보기"
+                  >
+                    ?
+                  </Link>
+                </>
+              )}
           </h2>
           <div className={styles.chartHeaderControls}>
             {!selectedCluster && mode === 'dashboard' && notebookOptions.length > 0 && (
@@ -955,11 +968,11 @@ export default function ForgettingCurveChart({
                 strokeWidth="1"
               />
 
-              {/* 처음 학습일 라벨 (day 0) */}
+              {/* 처음 학습일 라벨 – x축 아래에 표시 (곡선과 겹치지 않도록) */}
               {detailChart.curve.firstLearnedDate && (
                 <text
                   x={detailChart.curve.firstLearnedX}
-                  y={paddingTop + 11}
+                  y={paddingTop + chartHeight + 28}
                   textAnchor="start"
                   className={styles.firstLearnedLabel}
                 >

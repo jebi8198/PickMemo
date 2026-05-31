@@ -1,0 +1,408 @@
+.page {
+  min-height: 100vh;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-family);
+}
+
+/* ── Hero ── */
+.hero {
+  background: var(--color-gradient-hero);
+  color: var(--text-inverse);
+  padding: 5rem 1.5rem 4rem;
+  text-align: center;
+}
+
+.heroEyebrow {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-primary-400);
+  margin: 0 0 var(--space-3);
+}
+
+.heroTitle {
+  font-family: var(--font-family-serif);
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: var(--font-weight-bold);
+  margin: 0 0 var(--space-4);
+  line-height: 1.2;
+}
+
+.heroDesc {
+  font-size: var(--font-size-base);
+  color: rgba(255, 255, 255, 0.75);
+  max-width: 540px;
+  margin: 0 auto var(--space-6);
+  line-height: 1.75;
+}
+
+.pickmemoBanner {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: var(--radius-full);
+  padding: 0.6rem 1.4rem;
+  font-size: var(--font-size-sm);
+  color: rgba(255, 255, 255, 0.82);
+  line-height: 1.6;
+  margin-bottom: var(--space-8);
+}
+
+.pickmemoLogo {
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary-400);
+}
+
+.pickmemoBanner strong {
+  color: #fff;
+  font-weight: var(--font-weight-semibold);
+}
+
+.toc {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.tocItem {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+  transition: color 0.15s;
+}
+
+.tocItem:hover {
+  color: var(--color-primary-400);
+}
+
+.tocDot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  flex-shrink: 0;
+}
+
+/* ── Content ── */
+.content {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 3rem 1.5rem 5rem;
+}
+
+/* ── Section ── */
+.section {
+  margin-bottom: 4.5rem;
+  scroll-margin-top: 80px;
+}
+
+.sectionLabel {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.1em;
+  color: var(--color-primary-500);
+  margin-bottom: var(--space-2);
+}
+
+.sectionTitle {
+  font-family: var(--font-family-serif);
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  margin: 0 0 var(--space-5);
+  color: var(--text-primary);
+  border-bottom: 2px solid var(--border-subtle);
+  padding-bottom: var(--space-3);
+}
+
+.body {
+  font-size: var(--font-size-base);
+  line-height: 1.8;
+  color: var(--text-secondary);
+  margin: 0 0 var(--space-5);
+}
+
+.body strong {
+  color: var(--text-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* ── 차트 박스 ── */
+.chartBox {
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-xl);
+  padding: var(--space-5) var(--space-5) var(--space-4);
+  margin: var(--space-6) 0;
+  box-shadow: var(--shadow-sm);
+}
+
+.chartCaption {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0 0 var(--space-3);
+}
+
+.illustSvg {
+  width: 100%;
+  display: block;
+}
+
+.chartNote {
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  margin: var(--space-3) 0 0;
+  text-align: center;
+  font-style: italic;
+}
+
+/* ── Callout ── */
+.callout {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  background: color-mix(in srgb, var(--color-primary-500) 8%, var(--bg-secondary));
+  border-left: 3px solid var(--color-primary-500);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  padding: var(--space-4) var(--space-5);
+  margin: var(--space-5) 0;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.calloutIcon {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.callout code {
+  background: rgba(0, 0, 0, 0.07);
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.9em;
+}
+
+/* ── Step List ── */
+.stepList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin: var(--space-5) 0;
+}
+
+.step {
+  display: flex;
+  gap: var(--space-4);
+  align-items: flex-start;
+}
+
+.stepNum {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--color-primary-500);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  margin-top: 2px;
+}
+
+.step strong {
+  display: block;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  margin-bottom: var(--space-1);
+}
+
+.step p {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  line-height: 1.65;
+}
+
+/* ── Key Points ── */
+.keyPointGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
+  margin: var(--space-6) 0;
+}
+
+.keyPoint {
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+}
+
+.keyPointValue {
+  font-family: var(--font-family-serif);
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary-600);
+  margin-bottom: var(--space-1);
+}
+
+.keyPointLabel {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  line-height: 1.4;
+}
+
+/* ── Guide Grid (색상 설명) ── */
+.guideGrid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: var(--space-5) 0;
+}
+
+.guideItem {
+  display: flex;
+  gap: var(--space-4);
+  align-items: flex-start;
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-5);
+}
+
+.guideDot {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  margin-top: 4px;
+  box-shadow: 0 0 6px currentColor;
+}
+
+.guideItem strong {
+  display: block;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.guideItem p {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+/* ── Guide List (기능 설명) ── */
+.guideList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin: var(--space-5) 0;
+}
+
+.guideRow {
+  display: flex;
+  gap: var(--space-4);
+  align-items: flex-start;
+}
+
+.guideIcon {
+  font-size: 1.3rem;
+  flex-shrink: 0;
+  width: 32px;
+  text-align: center;
+  margin-top: 1px;
+}
+
+.guideRow strong {
+  display: block;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  margin-bottom: var(--space-1);
+}
+
+.guideRow p {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.guideRow em {
+  color: var(--color-primary-600);
+  font-style: normal;
+  font-weight: var(--font-weight-medium);
+}
+
+/* ── CTA ── */
+.cta {
+  text-align: center;
+  margin-top: 2rem;
+  padding: 3rem 2rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-xl);
+}
+
+.cta p {
+  margin: 0 0 var(--space-5);
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+}
+
+.ctaButton {
+  display: inline-block;
+  background: var(--color-gradient-primary);
+  color: #fff;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  padding: 0.75rem 2rem;
+  border-radius: var(--radius-full);
+  text-decoration: none;
+  transition: opacity 0.15s, transform 0.15s;
+}
+
+.ctaButton:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+/* ── Responsive ── */
+@media (max-width: 640px) {
+  .hero {
+    padding: 4rem 1.25rem 3rem;
+  }
+
+  .toc {
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .tocDot {
+    display: none;
+  }
+
+  .keyPointGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
