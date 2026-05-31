@@ -4,11 +4,12 @@ import { calculateNextReview } from '../src/lib/review-algorithm.ts';
 
 const now = new Date('2026-05-29T00:00:00.000Z');
 
-test('AGAIN schedules immediate retry and increases difficulty', () => {
+test('AGAIN schedules immediate retry, raises difficulty, and does not count as a review (lapse)', () => {
   const result = calculateNextReview('AGAIN', 4, 1, 2, now);
 
   assert.equal(result.intervalDays, 0);
-  assert.equal(result.reviewCount, 3);
+  // Lapse: reviewCount는 증가하지 않고 학습 단계를 유지한다
+  assert.equal(result.reviewCount, 2);
   assert.ok(result.difficultyWeight > 1);
   assert.equal(result.nextReviewDate.getTime(), now.getTime());
 });

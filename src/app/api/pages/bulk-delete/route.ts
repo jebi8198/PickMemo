@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import Notebook from '@/models/Notebook';
 import Page from '@/models/Page';
+import ReviewLog from '@/models/ReviewLog';
 import { getErrorMessage } from '@/lib/api';
 import { validateObjectIdList } from '@/lib/validation';
 
@@ -38,6 +39,7 @@ export async function POST(req: Request) {
 
     const ownedPageIds = pages.map((page) => page._id.toString());
     const deleteResult = await Page.deleteMany({ _id: { $in: ownedPageIds }, userId });
+    await ReviewLog.deleteMany({ pageId: { $in: ownedPageIds }, userId });
 
     const notebookDeleteCounts = new Map<string, number>();
     for (const page of pages) {

@@ -13,7 +13,7 @@ import { useConfirm } from '@/components/providers/ConfirmProvider';
 import { useToast } from '@/components/providers/ToastProvider';
 import { getResponseError } from '@/lib/http';
 import { formatDisplayDate } from '@/lib/date';
-import ForgettingCurveChart, { ForgettingCurveCard } from '@/components/dashboard/ForgettingCurveChart';
+import ForgettingCurveChart, { ForgettingCurveCard, ForgettingCurveReviewLog } from '@/components/dashboard/ForgettingCurveChart';
 import styles from './page.module.css';
 
 type PageStatus = 'new' | 'learning' | 'review' | 'graduated';
@@ -43,6 +43,7 @@ interface PageItem {
   lastReviewedAt?: string | null;
   intervalDays?: number;
   difficultyWeight?: number;
+  reviewLogs?: ForgettingCurveReviewLog[];
 }
 
 const pageSize = 24;
@@ -381,6 +382,7 @@ export default function NotebookDetailPage() {
     createdAt: page.createdAt ?? new Date().toISOString(),
     difficultyWeight: page.difficultyWeight ?? 1,
     reviewCount: page.reviewCount,
+    reviewLogs: page.reviewLogs ?? [],
   })), [pages, notebook]);
   const shouldShowCurve = pages.length > 0 && pages.some((page) => page.reviewCount > 0);
 

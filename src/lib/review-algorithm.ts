@@ -22,7 +22,13 @@ export function calculateNextReview(
     case 'AGAIN':
       intervalDays = 0;
       difficultyWeight = Math.min(3.0, normalizedDifficulty + 0.35);
-      break;
+      // Lapse: reviewCount를 올리지 않아 다음 복습에서 학습 단계를 유지한다
+      return {
+        nextReviewDate: now,
+        intervalDays: 0,
+        difficultyWeight: Math.round(difficultyWeight * 100) / 100,
+        reviewCount: currentReviewCount,
+      };
     case 'HARD':
       intervalDays = currentReviewCount === 0 ? 1 : Math.max(1, currentInterval * 1.15);
       difficultyWeight = Math.min(3.0, normalizedDifficulty + 0.18);

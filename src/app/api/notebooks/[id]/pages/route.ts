@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import Notebook from '@/models/Notebook';
 import Page from '@/models/Page';
+import ReviewLog from '@/models/ReviewLog';
 import { getErrorMessage } from '@/lib/api';
 import { validatePagePayloads } from '@/lib/validation';
 
@@ -50,9 +51,35 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       return NextResponse.json({ error: 'Notebook not found' }, { status: 404 });
     }
 
-    const pages = await Page.find({ notebookId: id });
+    const pages = await Page.find({ notebookId: id, userId }).lean();
+    const pageIds = pages.map((page) => page._id);
+    const reviewLogs = await ReviewLog.find({ userId, notebookId: id, pageId: { $in: pageIds } })
+      .sort({ reviewedAt: 1 })
+      .select('_id pageId reviewedAt feedback previousIntervalDays nextIntervalDays previousDifficultyWeight nextDifficultyWeight previousReviewCount nextReviewCount nextReviewDate')
+      .lean();
+    const logsByPageId = new Map<string, Record<string, unknown>[]>();
 
-    return NextResponse.json({ pages }, { status: 200 });
+    reviewLogs.forEach((log) => {
+      const pageId = log.pageId?.toString();
+      if (!pageId) return;
+
+      const items = logsByPageId.get(pageId) ?? [];
+      items.push({
+        ...log,
+        _id: log._id.toString(),
+        pageId,
+      });
+      logsByPageId.set(pageId, items);
+    });
+    const pagesWithLogs = pages.map((page) => ({
+      ...page,
+      _id: page._id.toString(),
+      notebookId: page.notebookId?.toString(),
+      userId: page.userId?.toString(),
+      reviewLogs: logsByPageId.get(page._id.toString()) ?? [],
+    }));
+
+    return NextResponse.json({ pages: pagesWithLogs }, { status: 200 });
   } catch (error: unknown) {
     return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }

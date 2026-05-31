@@ -15,6 +15,21 @@ export interface ForgettingCurveCard {
   createdAt: string | Date;
   difficultyWeight: number;
   reviewCount: number;
+  reviewLogs?: ForgettingCurveReviewLog[];
+}
+
+export interface ForgettingCurveReviewLog {
+  _id?: string;
+  pageId?: string;
+  reviewedAt: string | Date;
+  feedback: 'AGAIN' | 'HARD' | 'GOOD' | 'EASY';
+  previousIntervalDays: number;
+  nextIntervalDays: number;
+  previousDifficultyWeight: number;
+  nextDifficultyWeight: number;
+  previousReviewCount: number;
+  nextReviewCount: number;
+  nextReviewDate: string | Date;
 }
 
 type ChartMode = 'dashboard' | 'notebook';
@@ -47,6 +62,24 @@ interface DotPoint {
   status: 'safe' | 'warning' | 'danger';
   difficulty: number;
   reviewCount: number;
+  reviewLogs: NormalizedReviewLog[];
+}
+
+interface NormalizedReviewLog {
+  reviewedAt: Date;
+  feedback: ForgettingCurveReviewLog['feedback'];
+  previousIntervalDays: number;
+  nextIntervalDays: number;
+  previousDifficultyWeight: number;
+  nextDifficultyWeight: number;
+  previousReviewCount: number;
+  nextReviewCount: number;
+  nextReviewDate: Date;
+}
+
+interface SawtoothSegment {
+  durationDays: number;
+  stabilityDays: number;
 }
 
 interface DotCluster {
@@ -76,12 +109,24 @@ interface CurvePath {
   opacity?: number;
 }
 
+interface ReviewMarker {
+  x: number;
+  yTop: number;    // 100% 지점 (점선 상단)
+  yBottom: number; // 복습 직전 유지율 지점 (점선 하단)
+  feedback?: NormalizedReviewLog['feedback'];
+  reviewedAt?: Date;
+}
+
 interface DetailCurve {
   id: string;
   topic: string;
   status: DotPoint['status'];
-  path: string;
+  actualPath: string;    // 현재 시점까지의 실제 복습 이력 (실선)
+  predictedPath: string; // 현재 시점 이후의 망각 예측 (점선)
   resetXs: number[];
+  reviewMarkers: ReviewMarker[];
+  firstLearnedX: number;       // 처음 학습 지점 (day 0)의 x좌표
+  firstLearnedDate?: Date;     // 처음 학습일 (첫 복습 기록 기준)
   currentX: number;
   currentY: number;
   color: string;
@@ -90,10 +135,36 @@ interface DetailCurve {
   nextReviewDate: Date;
 }
 
+interface DetailPoint {
+  id: string;
+  topics: string[];
+  status: DotPoint['status'];
+  x: number;
+  y: number;
+  color: string;
+  retention: number;
+  progressPercent: string;
+  nextReviewDate: Date;
+  elapsedDays: number;
+  intervalDays: number;
+  reviewCount: number;
+  feedback?: NormalizedReviewLog['feedback'];
+  count: number;
+}
+
+interface HoveredMarker {
+  marker: ReviewMarker;
+  x: number;
+  y: number;
+}
+
 interface DetailChart {
   maxDays: number;
+  paddingTop: number;
+  chartHeight: number;
   axisDays: number[];
-  curves: DetailCurve[];
+  curve: DetailCurve;
+  points: DetailPoint[];
 }
 
 interface TooltipPosition {
@@ -118,12 +189,9 @@ function getRetention(elapsedDays: number, intervalDays: number) {
   return 100 * Math.pow(1 + safeElapsedDays / (9 * stability), -1);
 }
 
-function getScheduleStatus(nextReviewDate: Date, now: Date, progressRatio: number): DotPoint['status'] {
-  const diffMs = nextReviewDate.getTime() - now.getTime();
-  const warningProgressRatio = 0.8;
-
-  if (diffMs <= 0) return 'danger';
-  if (progressRatio >= warningProgressRatio) return 'warning';
+function getScheduleStatus(progressRatio: number): DotPoint['status'] {
+  if (progressRatio >= 1) return 'danger';
+  if (progressRatio >= 0.8) return 'warning';
   return 'safe';
 }
 
@@ -141,6 +209,10 @@ function getNotebookOffset(notebookId: string) {
 
 function formatAxisDay(day: number) {
   return Number.isInteger(day) ? String(day) : day.toFixed(1);
+}
+
+function formatShortDate(date: Date) {
+  return `${date.getMonth() + 1}/${date.getDate()}`;
 }
 
 function formatIntervalDays(day: number) {
@@ -165,6 +237,71 @@ function getAverageInterval(cards: ForgettingCurveCard[] | DotPoint[]) {
   if (validIntervals.length === 0) return MIN_STABILITY_DAYS;
 
   return validIntervals.reduce((sum, interval) => sum + interval, 0) / validIntervals.length;
+}
+
+function normalizeReviewLogs(logs?: ForgettingCurveReviewLog[]): NormalizedReviewLog[] {
+  return (logs ?? [])
+    .map((log) => ({
+      reviewedAt: new Date(log.reviewedAt),
+      feedback: log.feedback,
+      previousIntervalDays: Number(log.previousIntervalDays) || 0,
+      nextIntervalDays: Number(log.nextIntervalDays) || 0,
+      previousDifficultyWeight: Number(log.previousDifficultyWeight) || 1,
+      nextDifficultyWeight: Number(log.nextDifficultyWeight) || 1,
+      previousReviewCount: Number(log.previousReviewCount) || 0,
+      nextReviewCount: Number(log.nextReviewCount) || 0,
+      nextReviewDate: new Date(log.nextReviewDate),
+    }))
+    .filter((log) => Number.isFinite(log.reviewedAt.getTime()))
+    .sort((a, b) => a.reviewedAt.getTime() - b.reviewedAt.getTime());
+}
+
+function getFallbackSawtoothSegments(dot: DotPoint): SawtoothSegment[] {
+  const completedReviews = Math.min(Math.max(dot.reviewCount, 0), 6);
+  // 실제 알고리즘의 GOOD 배율(2.2/difficulty)로 역산
+  const growthFactor = Math.max(1.2, 2.2 / Math.max(0.5, dot.difficulty));
+  const historicalIntervals = Array.from({ length: completedReviews }, (_, index) => {
+    const divisor = Math.pow(growthFactor, completedReviews - index);
+    return Math.max(MIN_STABILITY_DAYS, dot.intervalDays / divisor);
+  });
+  const currentInterval = Math.max(MIN_STABILITY_DAYS, dot.intervalDays, dot.elapsedDays);
+
+  return [...historicalIntervals, currentInterval].map((interval) => ({
+    durationDays: interval,
+    stabilityDays: interval,
+  }));
+}
+
+function getDayDelta(from: Date, to: Date) {
+  return Math.max(0, (to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+function getSawtoothSegments(dot: DotPoint): SawtoothSegment[] {
+  if (dot.reviewLogs.length > 0) {
+    return dot.reviewLogs.map((log, index) => {
+      const nextLog = dot.reviewLogs[index + 1];
+      const stabilityDays = Math.max(MIN_STABILITY_DAYS, log.nextIntervalDays);
+      const durationDays = nextLog
+        ? getDayDelta(log.reviewedAt, nextLog.reviewedAt)
+        : Math.max(dot.elapsedDays, stabilityDays);
+
+      return {
+        durationDays,
+        stabilityDays,
+      };
+    });
+  }
+
+  return getFallbackSawtoothSegments(dot);
+}
+
+
+function getFeedbackLabel(feedback?: NormalizedReviewLog['feedback']) {
+  if (feedback === 'AGAIN') return '다시';
+  if (feedback === 'HARD') return '어려움';
+  if (feedback === 'GOOD') return '좋음';
+  if (feedback === 'EASY') return '쉬움';
+  return '기록 없음';
 }
 
 function buildCurvePath({
@@ -219,50 +356,83 @@ function buildDetailCurvePath({
   minRetention: number;
   maxRetention: number;
 }): DetailCurve {
-  const pathPoints: string[] = [];
   const resetXs: number[] = [];
-  const completedReviews = Math.min(Math.max(dot.reviewCount, 0), 4);
-  const growthFactor = 2;
-  const historicalIntervals = Array.from({ length: completedReviews }, (_, index) => {
-    const divisor = Math.pow(growthFactor, completedReviews - index);
-    return Math.max(MIN_STABILITY_DAYS, dot.intervalDays / divisor);
-  });
-  const currentInterval = Math.max(MIN_STABILITY_DAYS, dot.intervalDays, dot.elapsedDays);
-  const intervals = [...historicalIntervals, currentInterval];
+  const reviewMarkers: ReviewMarker[] = [];
+  const segments = getSawtoothSegments(dot);
   const toX = (day: number) => paddingLeft + (Math.min(day, maxDays) / maxDays) * chartWidth;
   const toY = (retention: number) => paddingTop + chartHeight - ((Math.max(minRetention, retention) - minRetention) / (maxRetention - minRetention)) * chartHeight;
 
+  const currentSegmentStart = segments.slice(0, -1).reduce((sum, s) => sum + s.durationDays, 0);
+  const currentDay = currentSegmentStart + dot.elapsedDays;
+
+  // 현재 시점을 기준으로 좌측(실제 이력)·우측(미래 예측) 경로를 나눠 그린다.
+  type PathPoint = { x: number; y: number; reset: boolean };
+  const allPoints: PathPoint[] = [];
   let cursor = 0;
 
-  intervals.forEach((interval, segmentIndex) => {
-    const stepSize = Math.max(0.03, interval / 36);
+  segments.forEach((segment, segmentIndex) => {
+    const stepSize = Math.max(0.03, segment.durationDays / 36);
 
-    for (let t = 0; t <= interval; t += stepSize) {
-      const x = toX(cursor + Math.min(t, interval));
-      const y = toY(getRetention(t, interval));
-      pathPoints.push(`${segmentIndex === 0 && t === 0 ? 'M' : 'L'} ${x} ${y}`);
+    for (let t = 0; t <= segment.durationDays; t += stepSize) {
+      const day = cursor + Math.min(t, segment.durationDays);
+      allPoints.push({ x: toX(day), y: toY(getRetention(t, segment.stabilityDays)), reset: false });
     }
 
-    pathPoints.push(`L ${toX(cursor + interval)} ${toY(getRetention(interval, interval))}`);
-    cursor += interval;
+    allPoints.push({
+      x: toX(cursor + segment.durationDays),
+      y: toY(getRetention(segment.durationDays, segment.stabilityDays)),
+      reset: false,
+    });
+    cursor += segment.durationDays;
 
-    if (segmentIndex < intervals.length - 1) {
+    if (segmentIndex < segments.length - 1) {
       const resetX = toX(cursor);
-      pathPoints.push(`L ${resetX} ${toY(100)}`);
+      const preReviewRetention = getRetention(segment.durationDays, segment.stabilityDays);
+      allPoints.push({ x: resetX, y: toY(100), reset: true });
       resetXs.push(resetX);
+
+      // 이 리셋(100% 점프)은 다음 세그먼트를 시작시킨 복습 시점이다
+      const log = dot.reviewLogs[segmentIndex + 1];
+      reviewMarkers.push({
+        x: resetX,
+        yTop: toY(100),
+        yBottom: toY(preReviewRetention),
+        feedback: log?.feedback,
+        reviewedAt: log?.reviewedAt,
+      });
     }
   });
 
-  const currentSegmentStart = intervals.slice(0, -1).reduce((sum, interval) => sum + interval, 0);
-  const currentX = toX(currentSegmentStart + dot.elapsedDays);
+  const currentX = toX(currentDay);
   const currentY = toY(dot.retention);
+
+  // 현재 위치를 기준으로 분할 (경계 점을 양쪽에 공유해 곡선이 끊기지 않게 함)
+  const actualPts: PathPoint[] = [];
+  const predictedPts: PathPoint[] = [];
+  for (const point of allPoints) {
+    if (point.x <= currentX + 0.01) {
+      actualPts.push(point);
+    } else {
+      predictedPts.push(point);
+    }
+  }
+  const boundary: PathPoint = { x: currentX, y: currentY, reset: false };
+  actualPts.push(boundary);
+  predictedPts.unshift(boundary);
+
+  const toPath = (pts: PathPoint[]) =>
+    pts.map((p, i) => `${i === 0 || p.reset ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
 
   return {
     id: dot.cardId,
     topic: dot.topic,
     status: dot.status,
-    path: pathPoints.join(' '),
+    actualPath: toPath(actualPts),
+    predictedPath: predictedPts.length > 1 ? toPath(predictedPts) : '',
     resetXs,
+    reviewMarkers,
+    firstLearnedX: toX(0),
+    firstLearnedDate: dot.reviewLogs[0]?.reviewedAt,
     currentX,
     currentY,
     color: STATUS_COLORS[dot.status],
@@ -279,10 +449,11 @@ export default function ForgettingCurveChart({
   notebookColor = DEFAULT_NOTEBOOK_COLOR,
 }: ForgettingCurveChartProps) {
   const [hoveredCluster, setHoveredCluster] = useState<DotCluster | null>(null);
+  const [hoveredDetailPoint, setHoveredDetailPoint] = useState<DetailPoint | null>(null);
+  const [hoveredMarker, setHoveredMarker] = useState<HoveredMarker | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState<TooltipPosition | null>(null);
   const [selectedNotebookId, setSelectedNotebookId] = useState('all');
   const [selectedClusterId, setSelectedClusterId] = useState<string | null>(null);
-  const [selectedDetailCardId, setSelectedDetailCardId] = useState<string | null>(null);
   const svgContainerRef = useRef<HTMLDivElement | null>(null);
 
   // SVG 크기 정의
@@ -312,7 +483,9 @@ export default function ForgettingCurveChart({
   }, [filteredCards]);
 
   const xAxisDays = useMemo(() => {
-    const step = 2;
+    // 레이블이 8~12개 사이가 되도록 step을 동적으로 선택
+    const rawStep = maxDays / 10;
+    const step = rawStep <= 1 ? 1 : rawStep <= 2 ? 2 : rawStep <= 5 ? 5 : rawStep <= 10 ? 10 : Math.ceil(rawStep / 5) * 5;
     const days: number[] = [];
 
     for (let day = 0; day <= maxDays; day += step) {
@@ -333,9 +506,12 @@ export default function ForgettingCurveChart({
     const rect = svgContainerRef.current?.getBoundingClientRect();
     if (!rect) return;
 
+    const halfTooltipW = 100; // 툴팁 너비의 절반 근사값 (translate -50% 보정)
+    const tooltipH = 140;     // 툴팁 높이 근사값 (translate -100% 보정)
+
     setTooltipPosition({
-      x: Math.min(rect.width - 8, Math.max(8, clientX - rect.left)),
-      y: Math.min(rect.height - 8, Math.max(8, clientY - rect.top)),
+      x: Math.min(rect.width - halfTooltipW, Math.max(halfTooltipW, clientX - rect.left)),
+      y: Math.min(rect.height - 8, Math.max(tooltipH, clientY - rect.top)),
     });
   };
 
@@ -348,6 +524,7 @@ export default function ForgettingCurveChart({
       const lastReviewedAt = card.lastReviewedAt ? new Date(card.lastReviewedAt) : null;
       const nextReviewDate = new Date(card.nextReviewDate);
       const notebookId = card.notebookId || 'unknown';
+      const reviewLogs = normalizeReviewLogs(card.reviewLogs);
 
       // 1. 마지막 학습 시점(t0) 결정 (학습 이력 없으면 생성일 기준)
       const t0 = lastReviewedAt || createdAt;
@@ -374,7 +551,7 @@ export default function ForgettingCurveChart({
       const cy = Math.min(paddingTop + chartHeight, Math.max(paddingTop, baseCy + offset.y));
 
       // 7. 상태 설정: 실제 복습 예정일 기준
-      const status = getScheduleStatus(nextReviewDate, now, ratio);
+      const status = getScheduleStatus(ratio);
 
       return {
         cardId: card._id,
@@ -391,19 +568,12 @@ export default function ForgettingCurveChart({
         status,
         difficulty: card.difficultyWeight,
         reviewCount: card.reviewCount,
+        reviewLogs,
       };
     });
   }, [filteredCards, chartWidth, chartHeight, paddingTop, maxDays, minRetention, maxRetention]);
 
   const dotClusters = useMemo<DotCluster[]>(() => {
-    const byNotebook = new Map<string, DotPoint[]>();
-
-    for (const dot of dots) {
-      const items = byNotebook.get(dot.notebookId) || [];
-      items.push(dot);
-      byNotebook.set(dot.notebookId, items);
-    }
-
     const proximityX = 34;
     const proximityY = 24;
 
@@ -428,11 +598,14 @@ export default function ForgettingCurveChart({
           ? 'warning'
           : 'safe';
 
+      const notebookIds = new Set(items.map((item) => item.notebookId));
+      const notebookTitle = notebookIds.size > 1 ? '여러 공책' : primary.notebookTitle;
+
       return {
-        id: count === 1 ? primary.cardId : `${primary.notebookId}-${clusterIndex}`,
+        id: count === 1 ? primary.cardId : `cluster-${clusterIndex}`,
         kind: count === 1 ? 'card' : 'notebook',
         notebookId: primary.notebookId,
-        notebookTitle: primary.notebookTitle,
+        notebookTitle,
         dots: items,
         primary,
         topics: items.slice(0, 4).map((item) => item.topic),
@@ -449,26 +622,24 @@ export default function ForgettingCurveChart({
       };
     };
 
-    return Array.from(byNotebook.values()).flatMap((items) => {
-      const sorted = items.slice().sort((a, b) => a.cx - b.cx || a.cy - b.cy);
-      const clusters: DotPoint[][] = [];
+    const sorted = dots.slice().sort((a, b) => a.cx - b.cx || a.cy - b.cy);
+    const clusters: DotPoint[][] = [];
 
-      for (const dot of sorted) {
-        const candidate = clusters.find((cluster) => {
-          const cx = cluster.reduce((sum, item) => sum + item.cx, 0) / cluster.length;
-          const cy = cluster.reduce((sum, item) => sum + item.cy, 0) / cluster.length;
-          return Math.abs(dot.cx - cx) <= proximityX && Math.abs(dot.cy - cy) <= proximityY;
-        });
+    for (const dot of sorted) {
+      const candidate = clusters.find((cluster) => {
+        const cx = cluster.reduce((sum, item) => sum + item.cx, 0) / cluster.length;
+        const cy = cluster.reduce((sum, item) => sum + item.cy, 0) / cluster.length;
+        return Math.abs(dot.cx - cx) <= proximityX && Math.abs(dot.cy - cy) <= proximityY;
+      });
 
-        if (candidate) {
-          candidate.push(dot);
-        } else {
-          clusters.push([dot]);
-        }
+      if (candidate) {
+        candidate.push(dot);
+      } else {
+        clusters.push([dot]);
       }
+    }
 
-      return clusters.map(makeCluster);
-    });
+    return clusters.map(makeCluster);
   }, [dots]);
 
   const curvesToRender = useMemo<CurvePath[]>(() => {
@@ -495,47 +666,140 @@ export default function ForgettingCurveChart({
     return dotClusters.find((cluster) => cluster.id === selectedClusterId) ?? null;
   }, [dotClusters, selectedClusterId]);
 
-  const selectedDetailDot = useMemo(() => {
-    if (!selectedCluster) return null;
-    return selectedCluster.dots.find((dot) => dot.cardId === selectedDetailCardId) ?? selectedCluster.primary;
-  }, [selectedCluster, selectedDetailCardId]);
-
   const detailChart = useMemo<DetailChart | null>(() => {
-    if (!selectedDetailDot) return null;
+    if (!selectedCluster) return null;
 
-    const getSawtoothTotalDays = (dot: DotPoint) => {
-      const completedReviews = Math.min(Math.max(dot.reviewCount, 0), 4);
-      const historicalTotal = Array.from({ length: completedReviews }, (_, index) => {
-        const divisor = Math.pow(2, completedReviews - index);
-        return Math.max(MIN_STABILITY_DAYS, dot.intervalDays / divisor);
-      }).reduce((sum, interval) => sum + interval, 0);
-
-      return historicalTotal + Math.max(MIN_STABILITY_DAYS, dot.intervalDays, dot.elapsedDays);
+    // dot별 segments를 한 번만 계산해 재사용 (중복 호출 제거)
+    const dotSegmentsMap = new Map<string, SawtoothSegment[]>();
+    const getSegments = (dot: DotPoint) => {
+      if (!dotSegmentsMap.has(dot.cardId)) {
+        dotSegmentsMap.set(dot.cardId, getSawtoothSegments(dot));
+      }
+      return dotSegmentsMap.get(dot.cardId)!;
     };
+    const getSawtoothTotalDays = (dot: DotPoint) =>
+      getSegments(dot).reduce((sum, segment) => sum + segment.durationDays, 0);
+
+    // notebook 클러스터도 primary 카드의 실제 reviewLogs 사용
+    const representativeDot: DotPoint = {
+      ...selectedCluster.primary,
+      elapsedDays: selectedCluster.elapsedDays,
+      intervalDays: selectedCluster.intervalDays,
+      nextReviewDate: selectedCluster.nextReviewDate,
+      ratio: selectedCluster.progressPercent,
+      retention: selectedCluster.retention,
+      status: selectedCluster.status,
+      reviewCount: Math.round(selectedCluster.reviewCount),
+      reviewLogs: selectedCluster.primary.reviewLogs,
+    };
+
     const detailMaxDays = Math.max(
       2,
-      Math.ceil(getSawtoothTotalDays(selectedDetailDot) * 1.1)
+      Math.ceil(Math.max(
+        getSawtoothTotalDays(representativeDot),
+        ...selectedCluster.dots.map(getSawtoothTotalDays)
+      ) * 1.1)
     );
+    const detailPaddingTop = paddingTop + 14;
+    const detailChartHeight = chartHeight - 18;
+    const curve = buildDetailCurvePath({
+      dot: representativeDot,
+      maxDays: detailMaxDays,
+      chartWidth,
+      chartHeight: detailChartHeight,
+      paddingLeft,
+      paddingTop: detailPaddingTop,
+      minRetention,
+      maxRetention,
+    });
+    const toX = (day: number) => paddingLeft + (Math.min(day, detailMaxDays) / detailMaxDays) * chartWidth;
+    const toY = (retention: number) => detailPaddingTop + detailChartHeight - ((Math.max(minRetention, retention) - minRetention) / (maxRetention - minRetention)) * detailChartHeight;
+    const rawPoints = selectedCluster.dots.map((dot) => {
+      const segments = getSegments(dot);
+      const segmentStart = segments.slice(0, -1).reduce((sum, s) => sum + s.durationDays, 0);
+      const latestLog = dot.reviewLogs[dot.reviewLogs.length - 1];
+      return {
+        id: dot.cardId,
+        topic: dot.topic,
+        status: dot.status,
+        x: toX(segmentStart + dot.elapsedDays),
+        y: toY(dot.retention),
+        color: STATUS_COLORS[dot.status],
+        retention: dot.retention,
+        progressPercent: formatProgressPercent(dot.ratio),
+        nextReviewDate: dot.nextReviewDate,
+        elapsedDays: dot.elapsedDays,
+        intervalDays: dot.intervalDays,
+        reviewCount: dot.reviewCount,
+        feedback: latestLog?.feedback,
+      };
+    });
 
-    const curves: DetailCurve[] = [selectedDetailDot].map((dot) => ({
-      ...buildDetailCurvePath({
-        dot,
-        maxDays: detailMaxDays,
-        chartWidth,
-        chartHeight,
-        paddingLeft,
-        paddingTop,
-        minRetention,
-        maxRetention,
-      })
-    }));
+    // 위치가 가까운 점들을 하나로 병합
+    const overlapThreshold = 8;
+    const merged: typeof rawPoints = [];
+    const used = new Set<string>();
+
+    for (const point of rawPoints) {
+      if (used.has(point.id)) continue;
+      const group = rawPoints.filter(
+        (p) => !used.has(p.id) && Math.abs(p.x - point.x) <= overlapThreshold && Math.abs(p.y - point.y) <= overlapThreshold
+      );
+      group.forEach((p) => used.add(p.id));
+      if (group.length === 1) {
+        merged.push(point);
+      } else {
+        // 평균 위치, 가장 나쁜 상태를 대표 상태로
+        const avgX = group.reduce((s, p) => s + p.x, 0) / group.length;
+        const avgY = group.reduce((s, p) => s + p.y, 0) / group.length;
+        const avgRetention = group.reduce((s, p) => s + p.retention, 0) / group.length;
+        const repStatus: DotPoint['status'] = group.some((p) => p.status === 'danger')
+          ? 'danger'
+          : group.some((p) => p.status === 'warning')
+            ? 'warning'
+            : 'safe';
+        merged.push({
+          ...point,
+          x: avgX,
+          y: avgY,
+          retention: Math.round(avgRetention * 10) / 10,
+          status: repStatus,
+          color: STATUS_COLORS[repStatus],
+        });
+      }
+    }
+
+    const points = merged.map((p) => {
+      const group = rawPoints.filter(
+        (r) => Math.abs(r.x - p.x) <= overlapThreshold && Math.abs(r.y - p.y) <= overlapThreshold
+      );
+      return {
+        ...p,
+        topics: group.map((r) => r.topic),
+        count: group.length,
+      };
+    });
+
+    // 세부 X축 눈금: maxDays에 비례해 4~6개 생성
+    const rawStep = detailMaxDays / 5;
+    const detailStep = rawStep <= 1 ? 1 : rawStep <= 2 ? 2 : rawStep <= 5 ? 5 : rawStep <= 10 ? 10 : Math.ceil(rawStep / 5) * 5;
+    const axisDays: number[] = [];
+    for (let day = 0; day <= detailMaxDays; day += detailStep) {
+      axisDays.push(day);
+    }
+    if (axisDays[axisDays.length - 1] !== detailMaxDays) {
+      axisDays.push(detailMaxDays);
+    }
 
     return {
       maxDays: detailMaxDays,
-      curves,
-      axisDays: [0, Math.ceil(detailMaxDays / 2), detailMaxDays],
+      paddingTop: detailPaddingTop,
+      chartHeight: detailChartHeight,
+      curve,
+      points,
+      axisDays,
     };
-  }, [chartHeight, chartWidth, maxRetention, minRetention, paddingLeft, paddingTop, selectedDetailDot]);
+  }, [chartHeight, chartWidth, maxRetention, minRetention, paddingLeft, paddingTop, selectedCluster]);
 
   return (
     <div className={styles.chartWrapper}>
@@ -543,24 +807,10 @@ export default function ForgettingCurveChart({
         <div className={styles.chartHeaderRow}>
           <h2 className={styles.chartTitle}>
             {selectedCluster
-              ? `${selectedDetailDot?.topic ?? selectedCluster.primary.topic} 복습 곡선`
+              ? `${selectedCluster.kind === 'notebook' ? selectedCluster.notebookTitle : selectedCluster.primary.topic} 복습 곡선`
               : '에빙하우스 망각 곡선 분포도'}
           </h2>
           <div className={styles.chartHeaderControls}>
-            {selectedCluster && selectedCluster.count > 1 && (
-              <select
-                className={styles.notebookSelect}
-                value={selectedDetailDot?.cardId ?? selectedCluster.primary.cardId}
-                onChange={(event) => setSelectedDetailCardId(event.target.value)}
-                aria-label="상세 복습 곡선 카드 선택"
-              >
-                {selectedCluster.dots.map((dot) => (
-                  <option key={dot.cardId} value={dot.cardId}>
-                    {dot.topic}
-                  </option>
-                ))}
-              </select>
-            )}
             {!selectedCluster && mode === 'dashboard' && notebookOptions.length > 0 && (
               <select
                 className={styles.notebookSelect}
@@ -568,9 +818,9 @@ export default function ForgettingCurveChart({
                 onChange={(event) => {
                   setSelectedNotebookId(event.target.value);
                   setHoveredCluster(null);
+                  setHoveredDetailPoint(null);
                   setTooltipPosition(null);
                   setSelectedClusterId(null);
-                  setSelectedDetailCardId(null);
                 }}
                 aria-label="망각 곡선 노트북 필터"
               >
@@ -583,46 +833,77 @@ export default function ForgettingCurveChart({
               </select>
             )}
             {selectedCluster && (
+              <>
+                {selectedCluster.count > 1 && (
+                  <div className={styles.detailSummaryBadge} title="비슷한 복습 시점의 카드 묶음입니다.">
+                    <span>{selectedCluster.count}개 카드</span>
+                    <strong>평균 {formatProgressPercent(selectedCluster.progressPercent)}</strong>
+                  </div>
+                )}
               <button
                 type="button"
                 className={styles.chartModeButton}
                 onClick={() => {
                   setSelectedClusterId(null);
-                  setSelectedDetailCardId(null);
+                  setHoveredDetailPoint(null);
+                  setTooltipPosition(null);
                 }}
               >
                 전체 보기
               </button>
+              </>
             )}
           </div>
         </div>
         <p className={styles.chartSubtitle}>
           {selectedCluster
-            ? '선택한 카드의 복습 이력을 현재 데이터로 근사해, 복습 시점마다 100%로 회복되는 톱니형 곡선으로 표시합니다.'
-            : '배경선은 평균 기억 유지율 기준선이며, 점의 색은 실제 다음 복습일 기준 상태입니다.'}
+            ? selectedCluster.primary.reviewLogs.length === 0
+              ? '저장된 복습 이력이 없어 현재 상태를 근사해 표시한 곡선입니다. 실선은 현재까지, 점선은 앞으로의 망각 예측입니다.'
+              : selectedCluster.count > 1
+                ? '실선은 실제 복습 이력, 점선은 앞으로의 망각 예측입니다. 각 카드의 현재 위치는 점으로 표시됩니다.'
+                : '실선은 실제 복습 이력, 점선은 앞으로의 망각 예측입니다. 세로 점선은 복습 시점입니다.'
+            : dots.length > 0
+              ? '배경선은 평균 기억 유지율 기준선입니다. 점을 클릭하면 해당 카드의 복습 흐름을 자세히 볼 수 있습니다.'
+              : '배경선은 평균 기억 유지율 기준선이며, 점의 색은 복습 주기 진행률 기준 상태입니다.'}
         </p>
       </div>
 
-      <div className={styles.svgContainer} ref={svgContainerRef}>
+      <div
+        className={styles.svgContainer}
+        ref={svgContainerRef}
+        onTouchEnd={() => {
+          setHoveredDetailPoint(null);
+          setHoveredMarker(null);
+          setHoveredCluster(null);
+          setTooltipPosition(null);
+        }}
+      >
         <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} className={styles.chartSvg}>
           <defs>
             {/* 곡선 채우기 그라디언트 */}
             <linearGradient id="curveLineGrad" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="#10b981" />
-            <stop offset="52%" stopColor="#f59e0b" />
-            <stop offset="100%" stopColor="#f43f5e" />
-          </linearGradient>
+              <stop offset="0%" stopColor="#10b981" />
+              <stop offset="52%" stopColor="#f59e0b" />
+              <stop offset="100%" stopColor="#f43f5e" />
+            </linearGradient>
 
-            {/* 차트 영역 클리핑 패스 */}
+            {/* 대시보드 모드 클리핑 패스 */}
             <clipPath id="chartClip">
               <rect x={paddingLeft} y={paddingTop} width={chartWidth} height={chartHeight} />
             </clipPath>
+
+            {/* 세부 모드 클리핑 패스 – strokeWidth(3) 절반만큼 위쪽 여백 추가 */}
+            {detailChart && (
+              <clipPath id="detailChartClip">
+                <rect x={paddingLeft} y={detailChart.paddingTop - 2} width={chartWidth} height={detailChart.chartHeight + 2} />
+              </clipPath>
+            )}
           </defs>
 
           {selectedCluster && detailChart ? (
             <>
-              {[40, 70, 100].map((retentionValue) => {
-                const y = paddingTop + chartHeight - ((retentionValue - minRetention) / (maxRetention - minRetention)) * chartHeight;
+              {[20, 40, 60, 80, 100].map((retentionValue) => {
+                const y = detailChart.paddingTop + detailChart.chartHeight - ((retentionValue - minRetention) / (maxRetention - minRetention)) * detailChart.chartHeight;
                 return (
                   <g key={retentionValue}>
                     <line
@@ -645,9 +926,9 @@ export default function ForgettingCurveChart({
                   <g key={day}>
                     <line
                       x1={x}
-                      y1={paddingTop}
+                      y1={detailChart.paddingTop}
                       x2={x}
-                      y2={paddingTop + chartHeight}
+                      y2={detailChart.paddingTop + detailChart.chartHeight}
                       className={styles.gridLine}
                     />
                     <text x={x} y={paddingTop + chartHeight + 15} textAnchor="middle" className={styles.axisText}>
@@ -659,65 +940,180 @@ export default function ForgettingCurveChart({
 
               <line
                 x1={paddingLeft}
-                y1={paddingTop}
+                y1={detailChart.paddingTop}
                 x2={paddingLeft}
-                y2={paddingTop + chartHeight}
+                y2={detailChart.paddingTop + detailChart.chartHeight}
                 stroke="var(--border-default)"
                 strokeWidth="1"
               />
               <line
                 x1={paddingLeft}
-                y1={paddingTop + chartHeight}
+                y1={detailChart.paddingTop + detailChart.chartHeight}
                 x2={paddingLeft + chartWidth}
-                y2={paddingTop + chartHeight}
+                y2={detailChart.paddingTop + detailChart.chartHeight}
                 stroke="var(--border-default)"
                 strokeWidth="1"
               />
 
-              <g clipPath="url(#chartClip)">
-                {detailChart.curves.map((curve) => (
-                  <g key={curve.id}>
-                    {curve.resetXs.map((x) => (
-                      <line
-                        key={`${curve.id}-${x}`}
-                        x1={x}
-                        y1={paddingTop}
-                        x2={x}
-                        y2={paddingTop + chartHeight}
-                        className={styles.reviewMarker}
-                        stroke={curve.color}
-                      />
-                    ))}
-                    <path
-                      d={curve.path}
-                      fill="none"
-                      stroke={curve.color}
-                      strokeWidth={selectedCluster.kind === 'notebook' ? '2.2' : '3'}
-                      strokeOpacity={selectedCluster.kind === 'notebook' ? 0.5 : 0.9}
-                      className={styles.detailCurve}
-                    />
-                    <circle
-                      cx={curve.currentX}
-                      cy={curve.currentY}
-                      r={selectedCluster.kind === 'notebook' ? 4 : 5}
-                      fill={curve.color}
-                      stroke="#ffffff"
-                      strokeWidth="1.5"
-                    />
-                  </g>
-                ))}
-              </g>
-
-              <text x={paddingLeft} y={paddingTop + 14} className={styles.detailInlineText}>
-                {selectedDetailDot
-                  ? `${getStatusLabel(selectedDetailDot.status)} · 다음 복습일 ${formatDisplayDate(selectedDetailDot.nextReviewDate)}`
-                  : `${getStatusLabel(selectedCluster.status)} · 다음 복습일 ${formatDisplayDate(selectedCluster.nextReviewDate)}`}
-              </text>
-              {selectedCluster.count > 1 && (
-                <text x={paddingLeft} y={paddingTop + 30} className={styles.detailInlineSubText}>
-                  묶인 카드 {selectedCluster.count}개 중 1개 표시 중
+              {/* 처음 학습일 라벨 (day 0) */}
+              {detailChart.curve.firstLearnedDate && (
+                <text
+                  x={detailChart.curve.firstLearnedX}
+                  y={paddingTop + 11}
+                  textAnchor="start"
+                  className={styles.firstLearnedLabel}
+                >
+                  처음 학습 {formatShortDate(detailChart.curve.firstLearnedDate)}
                 </text>
               )}
+
+              {/* 복습 마커 날짜 라벨 – 클리핑 영역 바깥에 렌더링 */}
+              {detailChart.curve.reviewMarkers.map((marker) =>
+                marker.reviewedAt ? (
+                  <text
+                    key={`label-${marker.x}`}
+                    x={marker.x}
+                    y={paddingTop + 11}
+                    textAnchor="middle"
+                    className={styles.markerDateLabel}
+                  >
+                    {formatShortDate(marker.reviewedAt)}
+                  </text>
+                ) : null
+              )}
+
+              {/* 현재 시점 라벨 */}
+              <text
+                x={detailChart.curve.currentX}
+                y={paddingTop + 11}
+                textAnchor="middle"
+                className={styles.nowLabel}
+              >
+                현재
+              </text>
+
+              <g clipPath="url(#detailChartClip)">
+                {/* 처음 학습 지점 강조 점 (day 0, 100%) */}
+                {detailChart.curve.firstLearnedDate && (
+                  <circle
+                    cx={detailChart.curve.firstLearnedX}
+                    cy={detailChart.paddingTop}
+                    r={3}
+                    fill={detailChart.curve.color}
+                    className={styles.reviewMarkerCap}
+                  />
+                )}
+                {/* 복습 마커 – 복습 직전 유지율에서 100%까지 올라가는 세로 점선 */}
+                {detailChart.curve.reviewMarkers.map((marker) => (
+                  <g key={`marker-${marker.x}`}>
+                    <line
+                      x1={marker.x}
+                      y1={marker.yBottom}
+                      x2={marker.x}
+                      y2={marker.yTop}
+                      className={styles.reviewMarker}
+                      stroke={detailChart.curve.color}
+                    />
+                    {/* 100% 지점 강조 점 */}
+                    <circle
+                      cx={marker.x}
+                      cy={marker.yTop}
+                      r={2.5}
+                      fill={detailChart.curve.color}
+                      className={styles.reviewMarkerCap}
+                    />
+                    {/* 투명 클릭 영역 (피드백 기록이 있을 때만 인터랙션) */}
+                    {marker.feedback && (
+                      <rect
+                        x={marker.x - 8}
+                        y={marker.yTop}
+                        width={16}
+                        height={Math.max(marker.yBottom - marker.yTop, 16)}
+                        fill="transparent"
+                        className={styles.reviewMarkerHitArea}
+                        onMouseEnter={(event) => {
+                          setHoveredMarker({ marker, x: event.clientX, y: event.clientY });
+                          updateTooltipPosition(event.clientX, event.clientY);
+                        }}
+                        onMouseMove={(event) => {
+                          updateTooltipPosition(event.clientX, event.clientY);
+                        }}
+                        onMouseLeave={() => {
+                          setHoveredMarker(null);
+                          setTooltipPosition(null);
+                        }}
+                      />
+                    )}
+                  </g>
+                ))}
+                {/* 실제 복습 이력 구간 (실선) */}
+                <path
+                  key={`${selectedClusterId}-actual`}
+                  d={detailChart.curve.actualPath}
+                  fill="none"
+                  stroke={selectedCluster.kind === 'notebook' ? notebookColor : detailChart.curve.color}
+                  strokeWidth="3"
+                  strokeOpacity={selectedCluster.kind === 'notebook' ? 0.7 : 0.9}
+                  className={styles.detailCurve}
+                />
+                {/* 미래 망각 예측 구간 (점선) */}
+                {detailChart.curve.predictedPath && (
+                  <path
+                    key={`${selectedClusterId}-predicted`}
+                    d={detailChart.curve.predictedPath}
+                    fill="none"
+                    stroke={selectedCluster.kind === 'notebook' ? notebookColor : detailChart.curve.color}
+                    strokeWidth="2.5"
+                    strokeOpacity={0.45}
+                    strokeDasharray="5 5"
+                    className={styles.detailPredictedCurve}
+                  />
+                )}
+                {/* 현재 시점 세로 가이드 */}
+                <line
+                  x1={detailChart.curve.currentX}
+                  y1={detailChart.paddingTop}
+                  x2={detailChart.curve.currentX}
+                  y2={detailChart.paddingTop + detailChart.chartHeight}
+                  className={styles.nowGuide}
+                />
+                {detailChart.points.map((point) => (
+                  <circle
+                    key={point.id}
+                    className={styles.detailPoint}
+                    cx={point.x}
+                    cy={point.y}
+                    r={selectedCluster.kind === 'notebook' ? 4.5 : 5}
+                    fill={point.color}
+                    stroke="#ffffff"
+                    strokeWidth="1.5"
+                    onMouseEnter={(event) => {
+                      setHoveredDetailPoint(point);
+                      setHoveredMarker(null);
+                      updateTooltipPosition(event.clientX, event.clientY);
+                    }}
+                    onMouseMove={(event) => {
+                      updateTooltipPosition(event.clientX, event.clientY);
+                    }}
+                    onMouseLeave={() => {
+                      setHoveredDetailPoint(null);
+                      setTooltipPosition(null);
+                    }}
+                    onTouchStart={(event) => {
+                      const touch = event.touches[0];
+                      if (!touch) return;
+                      event.stopPropagation();
+                      setHoveredDetailPoint(point);
+                      updateTooltipPosition(touch.clientX, touch.clientY);
+                    }}
+                    onTouchMove={(event) => {
+                      const touch = event.touches[0];
+                      if (!touch) return;
+                      updateTooltipPosition(touch.clientX, touch.clientY);
+                    }}
+                  />
+                ))}
+              </g>
             </>
           ) : (
             <>
@@ -806,8 +1202,8 @@ export default function ForgettingCurveChart({
                     }}
                     onClick={() => {
                       setSelectedClusterId(cluster.id);
-                      setSelectedDetailCardId(cluster.primary.cardId);
                       setHoveredCluster(null);
+                      setHoveredDetailPoint(null);
                       setTooltipPosition(null);
                     }}
                     onMouseMove={(event) => updateTooltipPosition(event.clientX, event.clientY)}
@@ -857,10 +1253,96 @@ export default function ForgettingCurveChart({
               })}
             </>
           )}
+
+          {/* ── 축 제목 (공통) ── */}
+          <text
+            x={paddingLeft + chartWidth / 2}
+            y={svgHeight - 3}
+            textAnchor="middle"
+            className={styles.axisTitle}
+          >
+            경과 일수 (마지막 복습 기준)
+          </text>
+          <text
+            x={13}
+            y={paddingTop + chartHeight / 2}
+            textAnchor="middle"
+            transform={`rotate(-90 13 ${paddingTop + chartHeight / 2})`}
+            className={styles.axisTitle}
+          >
+            기억 유지도
+          </text>
         </svg>
 
         {/* ── 툴팁 (Tooltip) ── */}
-        {hoveredCluster && tooltipPosition && (
+        {hoveredMarker && tooltipPosition && !hoveredDetailPoint && (
+          <div
+            className={styles.tooltip}
+            style={{
+              left: `${tooltipPosition.x}px`,
+              top: `${tooltipPosition.y - 12}px`,
+            }}
+          >
+            <div className={styles.tooltipTopic}>복습 기록</div>
+            <div className={styles.tooltipGrid}>
+              <span>복습일:</span>
+              <span>{formatDisplayDate(hoveredMarker.marker.reviewedAt)}</span>
+
+              <span>피드백:</span>
+              <strong>{getFeedbackLabel(hoveredMarker.marker.feedback)}</strong>
+            </div>
+          </div>
+        )}
+        {hoveredDetailPoint && tooltipPosition && (
+          <div
+            className={styles.tooltip}
+            style={{
+              left: `${tooltipPosition.x}px`,
+              top: `${tooltipPosition.y - 12}px`,
+            }}
+          >
+            <div className={styles.tooltipTopic}>
+              {hoveredDetailPoint.count > 1
+                ? `${hoveredDetailPoint.count}개 카드`
+                : hoveredDetailPoint.topics[0]}
+            </div>
+            <div className={styles.tooltipGrid}>
+              <span>상태:</span>
+              <strong className={styles[hoveredDetailPoint.status]}>{getStatusLabel(hoveredDetailPoint.status)}</strong>
+
+              <span>기억 유지도:</span>
+              <strong className={styles[hoveredDetailPoint.status]}>{hoveredDetailPoint.retention}%</strong>
+
+              <span>복습 단계:</span>
+              <span>{hoveredDetailPoint.reviewCount === 0 ? '최초 학습' : `${hoveredDetailPoint.reviewCount}회 복습`}</span>
+
+              {hoveredDetailPoint.count === 1 && (
+                <>
+                  <span>최근 피드백:</span>
+                  <span>{getFeedbackLabel(hoveredDetailPoint.feedback)}</span>
+                </>
+              )}
+
+              <span>다음 복습일:</span>
+              <span>{formatDisplayDate(hoveredDetailPoint.nextReviewDate)}</span>
+
+              <span>복습 주기:</span>
+              <span>{formatIntervalDays(hoveredDetailPoint.intervalDays)}</span>
+
+              <span>주기 진행률:</span>
+              <span>{hoveredDetailPoint.progressPercent}</span>
+
+              <span>경과 시간:</span>
+              <span>{hoveredDetailPoint.elapsedDays}일 지남</span>
+            </div>
+            {hoveredDetailPoint.count > 1 && (
+              <div className={styles.tooltipTopics}>
+                {hoveredDetailPoint.topics.join(', ')}
+              </div>
+            )}
+          </div>
+        )}
+        {!hoveredDetailPoint && hoveredCluster && tooltipPosition && (
           <div
             className={styles.tooltip}
             style={{

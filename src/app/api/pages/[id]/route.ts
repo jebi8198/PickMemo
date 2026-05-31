@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import Page from '@/models/Page';
 import Notebook from '@/models/Notebook';
+import ReviewLog from '@/models/ReviewLog';
 import { getErrorMessage } from '@/lib/api';
 import { validatePagePayload } from '@/lib/validation';
 
@@ -76,6 +77,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     }
 
     await Notebook.findByIdAndUpdate(page.notebookId, { $inc: { pageCount: -1 } });
+    await ReviewLog.deleteMany({ pageId: page._id, userId: session.user.id });
 
     return NextResponse.json({ message: 'Page deleted successfully' }, { status: 200 });
   } catch (error: unknown) {
