@@ -40,8 +40,8 @@ export default function Home() {
             <span className={styles.highlight}>디지털 제비뽑기</span>
           </h1>
           <p className={styles.heroSub}>
-            마치 빈티지 나무 서재에서 새 공책을 꺼내어 복습하듯.<br />
-            인출 연습 기반의 장기 기억 전환 학습 플랫폼입니다.
+            배운 것을 오래 기억하도록 돕는<br />
+            간격 반복 기반 장기 기억 전환 학습 플랫폼입니다.
           </p>
           <div className={styles.heroActions}>
             <Link href={isAuthenticated ? '/dashboard' : '/auth/register'} className={styles.primaryBtn}>
