@@ -8,6 +8,8 @@ export interface INotebookDocument extends Document {
   isPublic: boolean;
   pageCount: number;
   reviewDueCount: number;
+  isPaused: boolean;
+  pausedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -21,6 +23,8 @@ const NotebookSchema = new Schema<INotebookDocument>(
     isPublic: { type: Boolean, default: false },
     pageCount: { type: Number, default: 0 },
     reviewDueCount: { type: Number, default: 0 },
+    isPaused: { type: Boolean, default: false, index: true },
+    pausedAt: { type: Date },
   },
   { timestamps: true }
 );

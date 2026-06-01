@@ -33,9 +33,12 @@ export async function POST(req: Request) {
       let totalDueCount = 0;
 
       for (const nb of allNotebooks) {
+        // 일시정지된 노트북은 전체 복습에서 제외
+        if (nb.isPaused) continue;
+
         const nbPages = await Page.find({ notebookId: nb._id, userId: session.user.id }).lean();
         const typedNbPages = nbPages as unknown as IPage[];
-        const duePages = typedNbPages.filter(p => new Date(p.nextReviewDate) <= now);
+        const duePages = typedNbPages.filter(p => !p.isPaused && new Date(p.nextReviewDate) <= now);
         totalDueCount += duePages.length;
 
         if (duePages.length > 0) {
@@ -84,7 +87,8 @@ export async function POST(req: Request) {
     }
 
     const pages = await Page.find({ notebookId, userId: session.user.id }).lean();
-    const typedPages = pages as unknown as IPage[];
+    // 일시정지된 카드는 학습 대상에서 제외
+    const typedPages = (pages as unknown as IPage[]).filter((page) => !page.isPaused);
     const reviewDueCount = typedPages.filter((page) => new Date(page.nextReviewDate) <= now).length;
 
     const sessionPages = (mode === 'all'

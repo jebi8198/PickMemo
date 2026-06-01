@@ -27,20 +27,23 @@ export async function GET() {
       ? pages.reduce((acc, p) => acc + p.difficultyWeight, 0) / pages.length
       : 0;
 
-    const allPages = await Page.find({ userId })
+    // 일시정지된 카드는 망각 곡선에서 제외
+    const allPages = await Page.find({ userId, isPaused: { $ne: true } })
       .select('_id notebookId topic lastReviewedAt nextReviewDate intervalDays createdAt difficultyWeight reviewCount')
       .lean();
 
-    // 노트북 id → 이름 매핑을 만들어 각 카드에 공책 이름 주입
-    const notebooks = await Notebook.find({ userId }).select('_id title').lean();
+    // 노트북 id → 이름 매핑 (일시정지된 노트북은 제외해 해당 카드도 그래프에서 빠짐)
+    const notebooks = await Notebook.find({ userId, isPaused: { $ne: true } }).select('_id title').lean();
     const notebookTitleMap = new Map(
       notebooks.map((nb) => [String(nb._id), nb.title])
     );
 
-    const pagesWithNotebook = allPages.map((page) => ({
-      ...page,
-      notebookTitle: notebookTitleMap.get(String(page.notebookId)) ?? '이름 없는 공책',
-    }));
+    const pagesWithNotebook = allPages
+      .filter((page) => notebookTitleMap.has(String(page.notebookId)))
+      .map((page) => ({
+        ...page,
+        notebookTitle: notebookTitleMap.get(String(page.notebookId)) ?? '이름 없는 공책',
+      }));
 
     return NextResponse.json({
       totalNotebooks,

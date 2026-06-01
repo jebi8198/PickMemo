@@ -31,6 +31,7 @@ interface NotebookDetail {
   createdAt?: string;
   lastStudiedAt?: string | null;
   isPublic?: boolean;
+  isPaused?: boolean;
 }
 
 interface PageItem {
@@ -44,6 +45,7 @@ interface PageItem {
   lastReviewedAt?: string | null;
   intervalDays?: number;
   difficultyWeight?: number;
+  isPaused?: boolean;
   reviewLogs?: ForgettingCurveReviewLog[];
 }
 
@@ -62,6 +64,7 @@ export default function NotebookDetailPage() {
   const [activeModal, setActiveModal] = useState<ActiveModal>(null);
   const [notebook, setNotebook] = useState<NotebookDetail | null>(null);
   const [isPublic, setIsPublic] = useState(false);
+  const [isNotebookPaused, setIsNotebookPaused] = useState(false);
   const [pages, setPages] = useState<PageItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -97,6 +100,7 @@ export default function NotebookDetailPage() {
         const pagesData = (await pagesRes.json()) as { pages: PageItem[] };
         setNotebook(notebookData.notebook);
         setIsPublic(notebookData.notebook.isPublic ?? false);
+        setIsNotebookPaused(notebookData.notebook.isPaused ?? false);
         setPages(pagesData.pages);
       } catch (error) {
         console.error('Failed to load notebook:', error);
@@ -319,6 +323,53 @@ export default function NotebookDetailPage() {
     }
   };
 
+  // ── 카드 일시정지/재개 ──
+  const setPagesPaused = async (pageIds: string[], paused: boolean) => {
+    if (pageIds.length === 0) return;
+    try {
+      const res = await fetch('/api/pages/bulk-pause', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pageIds, paused }),
+      });
+      if (!res.ok) throw new Error(await getResponseError(res, '일시정지 상태를 변경하지 못했습니다.'));
+      const idSet = new Set(pageIds);
+      setPages((current) => current.map((page) => idSet.has(page._id) ? { ...page, isPaused: paused } : page));
+      showToast(paused ? `${pageIds.length}개 카드를 일시정지했습니다.` : `${pageIds.length}개 카드를 재개했습니다.`, 'success');
+    } catch (error) {
+      console.error('Failed to toggle page pause:', error);
+      showToast(error instanceof Error ? error.message : '일시정지 상태를 변경하지 못했습니다.', 'error');
+    }
+  };
+
+  const handleTogglePagePause = (page: PageItem) => setPagesPaused([page._id], !page.isPaused);
+
+  const handlePauseSelectedPages = (paused: boolean) => {
+    setPagesPaused(selectedPages.map((page) => page._id), paused);
+    setSelectedPageIds([]);
+    setLastSelectedPageId(null);
+  };
+
+  // ── 노트북 단위 일시정지/재개 ──
+  const handleToggleNotebookPause = async () => {
+    if (!notebookId) return;
+    const nextPaused = !isNotebookPaused;
+    try {
+      const res = await fetch(`/api/notebooks/${notebookId}/pause`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paused: nextPaused }),
+      });
+      if (!res.ok) throw new Error(await getResponseError(res, '학습 일시정지 상태를 변경하지 못했습니다.'));
+      const data = (await res.json()) as { isPaused: boolean };
+      setIsNotebookPaused(data.isPaused);
+      showToast(data.isPaused ? '이 공책의 학습을 일시정지했습니다.' : '이 공책의 학습을 재개했습니다.', 'success');
+    } catch (error) {
+      console.error('Failed to toggle notebook pause:', error);
+      showToast(error instanceof Error ? error.message : '학습 일시정지 상태를 변경하지 못했습니다.', 'error');
+    }
+  };
+
   // ── 공책 편집 ──
   const handleEditNotebook = async (data: { title: string; description: string; color: string }) => {
     if (!notebookId) return;
@@ -374,20 +425,23 @@ export default function NotebookDetailPage() {
   const notebookOption = notebook
     ? [{ id: notebook._id, title: notebook.title, reviewCount: notebook.reviewDueCount ?? 0, pageCount: pages.length }]
     : [];
-  const chartCards = useMemo<ForgettingCurveCard[]>(() => pages.map((page) => ({
-    _id: page._id,
-    notebookId: notebook?._id,
-    notebookTitle: notebook?.title,
-    topic: page.topic,
-    lastReviewedAt: page.lastReviewedAt ?? undefined,
-    nextReviewDate: page.nextReviewDate,
-    intervalDays: page.intervalDays ?? 0,
-    createdAt: page.createdAt ?? new Date().toISOString(),
-    difficultyWeight: page.difficultyWeight ?? 1,
-    reviewCount: page.reviewCount,
-    reviewLogs: page.reviewLogs ?? [],
-  })), [pages, notebook]);
-  const shouldShowCurve = pages.length > 0 && pages.some((page) => page.reviewCount > 0);
+  // 일시정지된 카드(또는 노트북 전체 일시정지 시 모든 카드)는 망각 곡선에서 제외
+  const chartCards = useMemo<ForgettingCurveCard[]>(() => (isNotebookPaused ? [] : pages)
+    .filter((page) => !page.isPaused)
+    .map((page) => ({
+      _id: page._id,
+      notebookId: notebook?._id,
+      notebookTitle: notebook?.title,
+      topic: page.topic,
+      lastReviewedAt: page.lastReviewedAt ?? undefined,
+      nextReviewDate: page.nextReviewDate,
+      intervalDays: page.intervalDays ?? 0,
+      createdAt: page.createdAt ?? new Date().toISOString(),
+      difficultyWeight: page.difficultyWeight ?? 1,
+      reviewCount: page.reviewCount,
+      reviewLogs: page.reviewLogs ?? [],
+    })), [pages, notebook, isNotebookPaused]);
+  const shouldShowCurve = chartCards.length > 0 && chartCards.some((card) => card.reviewCount > 0);
 
   if (isLoading) {
     return (
@@ -497,14 +551,32 @@ export default function NotebookDetailPage() {
                 🔗 링크 복사
               </Button>
             )}
+            <Button variant="ghost" onClick={handleToggleNotebookPause}>
+              {isNotebookPaused ? '▶️ 학습 재개' : '⏸ 학습 일시정지'}
+            </Button>
             <Button variant="secondary" onClick={() => setActiveModal('addPage')}>
               ➕ 페이지 추가
             </Button>
-            <Button variant="primary" onClick={() => setActiveModal('session')} disabled={pages.length === 0}>
+            <Button variant="primary" onClick={() => setActiveModal('session')} disabled={pages.length === 0 || isNotebookPaused}>
               🎯 학습하기
             </Button>
           </div>
         </div>
+
+        {/* ── 일시정지 안내 ── */}
+        {isNotebookPaused && (
+          <div style={{
+            margin: '0 0 1rem',
+            padding: '0.75rem 1rem',
+            borderRadius: 'var(--radius-md)',
+            background: 'var(--bg-glass-strong, #f6f4f1)',
+            border: '1px dashed var(--border-default)',
+            color: 'var(--text-secondary)',
+            fontSize: 'var(--font-size-sm)',
+          }}>
+            ⏸ 이 공책은 학습이 일시정지되어 있습니다. 복습 큐와 망각 곡선에서 제외되며, 재개 시 정지 기간만큼 복습일이 자동으로 미뤄집니다.
+          </div>
+        )}
 
         {/* ── 망각 곡선 섹션 ── */}
         {shouldShowCurve && (
@@ -589,6 +661,22 @@ export default function NotebookDetailPage() {
                   {isAllVisibleSelected ? '표시 항목 해제' : '표시 항목 선택'}
                 </Button>
                 <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handlePauseSelectedPages(true)}
+                  disabled={selectedCount === 0}
+                >
+                  선택 일시정지
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handlePauseSelectedPages(false)}
+                  disabled={selectedCount === 0}
+                >
+                  선택 재개
+                </Button>
+                <Button
                   variant="danger"
                   size="sm"
                   onClick={handleDeleteSelectedPages}
@@ -609,9 +697,11 @@ export default function NotebookDetailPage() {
                   status={getPageStatus(page)}
                   createdAt={page.createdAt}
                   lastReviewedAt={page.lastReviewedAt}
+                  isPaused={page.isPaused}
                   selected={selectedPageIds.includes(page._id)}
                   selectionVisible={selectedCount > 0}
                   onSelectChange={(selected, shiftKey) => togglePageSelection(page._id, selected, shiftKey)}
+                  onTogglePause={() => handleTogglePagePause(page)}
                   onDelete={() => handleDeletePage(page._id)}
                 />
                 ))}

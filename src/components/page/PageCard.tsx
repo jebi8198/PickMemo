@@ -11,11 +11,13 @@ interface PageCardProps {
   status: 'new' | 'learning' | 'review' | 'graduated';
   createdAt?: string | Date;
   lastReviewedAt?: string | Date | null;
+  isPaused?: boolean;
   selected?: boolean;
   selectionVisible?: boolean;
   onSelectChange?: (selected: boolean, shiftKey: boolean) => void;
   onEdit?: () => void;
   onDelete?: () => void;
+  onTogglePause?: () => void;
 }
 
 export const PageCard: React.FC<PageCardProps> = ({
@@ -24,11 +26,13 @@ export const PageCard: React.FC<PageCardProps> = ({
   status,
   createdAt,
   lastReviewedAt,
+  isPaused = false,
   selected = false,
   selectionVisible = false,
   onSelectChange,
   onEdit,
   onDelete,
+  onTogglePause,
 }) => {
   const getStatusBadge = () => {
     switch (status) {
@@ -45,7 +49,7 @@ export const PageCard: React.FC<PageCardProps> = ({
 
   return (
     <div
-      className={`${styles.card} ${selected ? styles.selected : ''} ${selectionVisible ? styles.selectionVisible : ''}`}
+      className={`${styles.card} ${selected ? styles.selected : ''} ${selectionVisible ? styles.selectionVisible : ''} ${isPaused ? styles.paused : ''}`}
       onClick={handleCardClick}
       role="button"
       tabIndex={0}
@@ -68,6 +72,7 @@ export const PageCard: React.FC<PageCardProps> = ({
             <span className={styles.checkmark} />
           </label>
           {getStatusBadge()}
+          {isPaused && <Badge variant="default">⏸ 일시정지</Badge>}
         </div>
         <h4 className={styles.topic}>{topic}</h4>
       </div>
@@ -88,6 +93,12 @@ export const PageCard: React.FC<PageCardProps> = ({
           </div>
         </dl>
         <div className={styles.buttonGroup}>
+          {onTogglePause && (
+            <Button variant="ghost" size="sm" onClick={(event) => {
+              event.stopPropagation();
+              onTogglePause();
+            }}>{isPaused ? '재개' : '일시정지'}</Button>
+          )}
           <Button variant="ghost" size="sm" onClick={(event) => {
             event.stopPropagation();
             onEdit?.();

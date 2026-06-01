@@ -12,6 +12,8 @@ export interface IPageDocument extends Document {
   lastReviewedAt?: Date;
   nextReviewDate: Date;
   intervalDays: number;
+  isPaused: boolean;
+  pausedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -29,6 +31,8 @@ const PageSchema = new Schema<IPageDocument>(
     lastReviewedAt: { type: Date },
     nextReviewDate: { type: Date, default: Date.now },
     intervalDays: { type: Number, default: 0 },
+    isPaused: { type: Boolean, default: false, index: true },
+    pausedAt: { type: Date },
   },
   { timestamps: true }
 );

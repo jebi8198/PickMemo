@@ -16,6 +16,7 @@ export interface INotebook {
   isPublic: boolean;
   pageCount: number;
   reviewDueCount: number;
+  isPaused?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -34,6 +35,7 @@ export interface IPage {
   lastReviewedAt?: Date;
   nextReviewDate: Date;
   intervalDays: number;
+  isPaused?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
