@@ -4,8 +4,9 @@ import { useState, useMemo } from 'react';
 import styles from './ForgettingCurveChart.module.css';
 
 export interface NotebookOption {
-  value: string;
-  label: string;
+  id: string;
+  title: string;
+  color: string;
 }
 
 export interface ForgettingCurveCard {
