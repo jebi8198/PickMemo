@@ -37,7 +37,7 @@ export default function Home() {
         <section className={styles.hero}>
           <h1 className={styles.heroTitle}>
             뇌를 자극하는<br />
-            <span className={styles.highlight}>디지털 제비뽑기</span>
+            <span className={styles.highlight}>디지털 학습 가이드</span>
           </h1>
           <p className={styles.heroSub}>
             배운 것을 오래 기억하도록 돕는<br />

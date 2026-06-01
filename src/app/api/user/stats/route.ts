@@ -3,7 +3,6 @@ import { auth } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import Notebook from '@/models/Notebook';
 import Page from '@/models/Page';
-import ReviewLog from '@/models/ReviewLog';
 import { getErrorMessage } from '@/lib/api';
 
 export async function GET() {
@@ -28,52 +27,7 @@ export async function GET() {
       ? pages.reduce((acc, p) => acc + p.difficultyWeight, 0) / pages.length
       : 0;
 
-    const allPages = await Page.find({ userId })
-      .select('_id notebookId topic lastReviewedAt nextReviewDate intervalDays createdAt difficultyWeight reviewCount')
-      .lean();
-    const pageIds = allPages.map((page) => page._id);
-    const reviewLogs = await ReviewLog.find({ userId, pageId: { $in: pageIds } })
-      .sort({ reviewedAt: 1 })
-      .select('_id pageId reviewedAt feedback previousIntervalDays nextIntervalDays previousDifficultyWeight nextDifficultyWeight previousReviewCount nextReviewCount nextReviewDate')
-      .lean();
-    const logsByPageId = new Map<string, Record<string, unknown>[]>();
-
-    reviewLogs.forEach((log) => {
-      const pageId = log.pageId?.toString();
-      if (!pageId) return;
-
-      const items = logsByPageId.get(pageId) ?? [];
-      items.push({
-        ...log,
-        _id: log._id.toString(),
-        pageId,
-      });
-      logsByPageId.set(pageId, items);
-    });
-
-    const notebookIds = Array.from(
-      new Set(
-        allPages
-          .map((page) => page.notebookId?.toString())
-          .filter((id): id is string => Boolean(id))
-      )
-    );
-    const notebooks = await Notebook.find({ userId, _id: { $in: notebookIds } })
-      .select('_id title')
-      .lean();
-    const notebookTitleMap = new Map(
-      notebooks.map((notebook) => [notebook._id.toString(), notebook.title])
-    );
-    const chartPages = allPages.map((page) => {
-      const notebookId = page.notebookId?.toString();
-      return {
-        ...page,
-        _id: page._id.toString(),
-        notebookId,
-        notebookTitle: notebookId ? notebookTitleMap.get(notebookId) : undefined,
-        reviewLogs: logsByPageId.get(page._id.toString()) ?? [],
-      };
-    });
+    const allPages = await Page.find({ userId }).select('_id notebookId topic lastReviewedAt nextReviewDate intervalDays createdAt difficultyWeight reviewCount');
 
     return NextResponse.json({
       totalNotebooks,
@@ -81,7 +35,7 @@ export async function GET() {
       totalReviewed,
       reviewDueToday,
       averageDifficulty: Math.round(averageDifficulty * 100) / 100,
-      pages: chartPages
+      pages: allPages
     }, { status: 200 });
   } catch (error: unknown) {
     return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
