@@ -10,6 +10,9 @@ interface NotebookCardProps {
   description?: string;
   color: string;
   reviewCount?: number;
+  createdAt?: string;
+  lastStudiedAt?: string | null;
+  onStartSession?: () => void;
 }
 
 export const NotebookCard: React.FC<NotebookCardProps> = ({
