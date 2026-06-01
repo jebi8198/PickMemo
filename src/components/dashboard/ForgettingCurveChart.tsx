@@ -171,6 +171,7 @@ interface DetailChart {
 interface TooltipPosition {
   x: number;
   y: number;
+  above: boolean;
 }
 
 const MIN_STABILITY_DAYS = 0.5;
@@ -508,11 +509,14 @@ export default function ForgettingCurveChart({
     if (!rect) return;
 
     const halfTooltipW = 100; // 툴팁 너비의 절반 근사값 (translate -50% 보정)
-    const tooltipH = 140;     // 툴팁 높이 근사값 (translate -100% 보정)
+    const tooltipH = 140;     // 툴팁 높이 근사값
+    const cursorY = clientY - rect.top;
+    const above = cursorY >= tooltipH; // 위쪽 공간이 충분하면 커서 위에, 아니면 아래에 표시
 
     setTooltipPosition({
       x: Math.min(rect.width - halfTooltipW, Math.max(halfTooltipW, clientX - rect.left)),
-      y: Math.min(rect.height - 8, Math.max(tooltipH, clientY - rect.top)),
+      y: Math.min(rect.height - 8, Math.max(0, cursorY)),
+      above,
     });
   };
 
@@ -1293,7 +1297,8 @@ export default function ForgettingCurveChart({
             className={styles.tooltip}
             style={{
               left: `${tooltipPosition.x}px`,
-              top: `${tooltipPosition.y - 12}px`,
+              top: `${tooltipPosition.above ? tooltipPosition.y - 12 : tooltipPosition.y + 12}px`,
+              transform: tooltipPosition.above ? 'translate(-50%, -100%)' : 'translate(-50%, 0%)',
             }}
           >
             <div className={styles.tooltipTopic}>복습 기록</div>
@@ -1311,7 +1316,8 @@ export default function ForgettingCurveChart({
             className={styles.tooltip}
             style={{
               left: `${tooltipPosition.x}px`,
-              top: `${tooltipPosition.y - 12}px`,
+              top: `${tooltipPosition.above ? tooltipPosition.y - 12 : tooltipPosition.y + 12}px`,
+              transform: tooltipPosition.above ? 'translate(-50%, -100%)' : 'translate(-50%, 0%)',
             }}
           >
             <div className={styles.tooltipTopic}>
@@ -1360,7 +1366,8 @@ export default function ForgettingCurveChart({
             className={styles.tooltip}
             style={{
               left: `${tooltipPosition.x}px`,
-              top: `${tooltipPosition.y - 12}px`,
+              top: `${tooltipPosition.above ? tooltipPosition.y - 12 : tooltipPosition.y + 12}px`,
+              transform: tooltipPosition.above ? 'translate(-50%, -100%)' : 'translate(-50%, 0%)',
             }}
           >
             <div className={styles.tooltipTopic}>
