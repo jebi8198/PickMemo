@@ -27,7 +27,20 @@ export async function GET() {
       ? pages.reduce((acc, p) => acc + p.difficultyWeight, 0) / pages.length
       : 0;
 
-    const allPages = await Page.find({ userId }).select('_id notebookId topic lastReviewedAt nextReviewDate intervalDays createdAt difficultyWeight reviewCount');
+    const allPages = await Page.find({ userId })
+      .select('_id notebookId topic lastReviewedAt nextReviewDate intervalDays createdAt difficultyWeight reviewCount')
+      .lean();
+
+    // 노트북 id → 이름 매핑을 만들어 각 카드에 공책 이름 주입
+    const notebooks = await Notebook.find({ userId }).select('_id title').lean();
+    const notebookTitleMap = new Map(
+      notebooks.map((nb) => [String(nb._id), nb.title])
+    );
+
+    const pagesWithNotebook = allPages.map((page) => ({
+      ...page,
+      notebookTitle: notebookTitleMap.get(String(page.notebookId)) ?? '이름 없는 공책',
+    }));
 
     return NextResponse.json({
       totalNotebooks,
@@ -35,7 +48,7 @@ export async function GET() {
       totalReviewed,
       reviewDueToday,
       averageDifficulty: Math.round(averageDifficulty * 100) / 100,
-      pages: allPages
+      pages: pagesWithNotebook
     }, { status: 200 });
   } catch (error: unknown) {
     return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
