@@ -1424,30 +1424,36 @@ export default function ForgettingCurveChart({
       </div>
 
       {/* ── 범례 (Legend) ── */}
-      <div className={styles.legend}>
-        <div className={styles.legendItem}>
-          <span className={`${styles.legendColor} ${styles.safeColor}`} />
-          <span>안전 ({dots.filter(d => d.status === 'safe').length})</span>
-        </div>
-        <div className={styles.legendItem}>
-          <span className={`${styles.legendColor} ${styles.warningColor}`} />
-          <span>복습 임박 ({dots.filter(d => d.status === 'warning').length})</span>
-        </div>
-        <div className={styles.legendItem}>
-          <span className={`${styles.legendColor} ${styles.dangerColor}`} />
-          <span>복습 필요 ({dots.filter(d => d.status === 'danger').length})</span>
-        </div>
-        {mode === 'dashboard' && dots.length === 0 && (
-          <div className={styles.legendItem}>
-            <span>선택한 공책에 표시할 카드가 없습니다.</span>
+      {(() => {
+        // 드릴다운(세부 그래프) 상태면 선택된 클러스터의 점들로, 아니면 전체 점으로 동기화
+        const legendDots = selectedCluster ? selectedCluster.dots : dots;
+        return (
+          <div className={styles.legend}>
+            <div className={styles.legendItem}>
+              <span className={`${styles.legendColor} ${styles.safeColor}`} />
+              <span>안전 ({legendDots.filter(d => d.status === 'safe').length})</span>
+            </div>
+            <div className={styles.legendItem}>
+              <span className={`${styles.legendColor} ${styles.warningColor}`} />
+              <span>복습 임박 ({legendDots.filter(d => d.status === 'warning').length})</span>
+            </div>
+            <div className={styles.legendItem}>
+              <span className={`${styles.legendColor} ${styles.dangerColor}`} />
+              <span>복습 필요 ({legendDots.filter(d => d.status === 'danger').length})</span>
+            </div>
+            {!selectedCluster && mode === 'dashboard' && dots.length === 0 && (
+              <div className={styles.legendItem}>
+                <span>선택한 공책에 표시할 카드가 없습니다.</span>
+              </div>
+            )}
+            {!selectedCluster && mode === 'notebook' && dots.length === 0 && (
+              <div className={styles.legendItem}>
+                <span>표시할 복습 기록이 없습니다.</span>
+              </div>
+            )}
           </div>
-        )}
-        {mode === 'notebook' && dots.length === 0 && (
-          <div className={styles.legendItem}>
-            <span>표시할 복습 기록이 없습니다.</span>
-          </div>
-        )}
-      </div>
+        );
+      })()}
 
     </div>
   );
