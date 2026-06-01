@@ -23,6 +23,7 @@ export interface INotebook {
 export interface IPage {
   _id: string;
   notebookId: string;
+  notebookTitle?: string;
   userId: string;
   topic: string;
   description: string;

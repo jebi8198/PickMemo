@@ -39,8 +39,8 @@ export async function POST(req: Request) {
         totalDueCount += duePages.length;
 
         if (duePages.length > 0) {
-          const shuffledDue = fisherYatesShuffle(duePages);
-          
+          const shuffledDue = fisherYatesShuffle(duePages).map(p => ({ ...p, notebookTitle: nb.title }));
+
           // 이미 큐에 카드가 있다면, 새로운 노트북으로 넘어갈 때 Separator 추가
           if (combinedQueue.length > 0) {
             combinedQueue.push({
@@ -87,9 +87,10 @@ export async function POST(req: Request) {
     const typedPages = pages as unknown as IPage[];
     const reviewDueCount = typedPages.filter((page) => new Date(page.nextReviewDate) <= now).length;
 
-    const sessionPages = mode === 'all'
+    const sessionPages = (mode === 'all'
       ? fisherYatesShuffle(typedPages).slice(0, limit)
-      : buildSessionQueue(typedPages, limit);
+      : buildSessionQueue(typedPages, limit)
+    ).map(p => ({ ...p, notebookTitle: notebook.title }));
 
     const result = {
       pages: sessionPages,

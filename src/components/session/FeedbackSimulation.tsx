@@ -6,13 +6,21 @@ import styles from './FeedbackSimulation.module.css';
 
 interface FeedbackSimulationProps {
   currentIntervalDays: number;
+  difficultyWeight: number;
   lastReviewedAt?: string | Date;
   createdAt: string | Date;
   hoveredFeedback: FeedbackType | null;
 }
 
+// 실제 ForgettingCurveChart와 동일한 망각 공식
+function getRetention(elapsedDays: number, intervalDays: number) {
+  const stability = Math.max(0.5, intervalDays);
+  return 100 * Math.pow(1 + elapsedDays / (9 * stability), -1);
+}
+
 export default function FeedbackSimulation({
   currentIntervalDays,
+  difficultyWeight,
   lastReviewedAt,
   createdAt,
   hoveredFeedback,
@@ -39,38 +47,36 @@ export default function FeedbackSimulation({
     const t0 = lastReviewedAt ? new Date(lastReviewedAt) : new Date(createdAt);
     const elapsedMs = Math.max(0, now.getTime() - t0.getTime());
     const elapsedDays = elapsedMs / (1000 * 60 * 60 * 24);
-    
-    // 현재 주기 (0일이면 0.5일로 간주)
+
     const interval = currentIntervalDays > 0 ? currentIntervalDays : 0.5;
-    const ratio = elapsedDays / interval; // x = t / I
-    const retention = 100 * Math.exp(-ratio / 2); // R = 100 * e^(-x / 2)
+    const retention = getRetention(elapsedDays, interval);
 
     return {
       elapsedDays: Math.round(elapsedDays * 10) / 10,
       interval,
-      ratio,
       retention: Math.round(Math.max(0, Math.min(100, retention)) * 10) / 10,
     };
   }, [currentIntervalDays, lastReviewedAt, createdAt]);
 
-  // 호버 중인 피드백에 따른 새로운 주기 계산
+  // 호버 중인 피드백에 따른 새로운 주기 계산 (review-algorithm.ts와 동일한 로직)
   const newIntervalDays = useMemo(() => {
     if (!hoveredFeedback) return cardStats.interval;
     const I = currentIntervalDays;
-    
+    const d = Math.min(3.0, Math.max(0.5, difficultyWeight || 1.0));
+
     switch (hoveredFeedback) {
       case 'AGAIN':
-        return 0.5;
+        return 0;
       case 'HARD':
-        return Math.max(1, Math.round(I * 1.2));
+        return Math.round(Math.max(1, I * 1.15) * 10) / 10;
       case 'GOOD':
-        return I === 0 ? 1 : Math.max(1, Math.round(I * 2.0));
+        return Math.round(Math.max(1, I === 0 ? 1 : I * (2.2 / d)) * 10) / 10;
       case 'EASY':
-        return I === 0 ? 3 : Math.max(1, Math.round(I * 2.5));
+        return Math.round(Math.max(2, I === 0 ? 3 : I * (2.8 / d) + 1) * 10) / 10;
       default:
         return I || 0.5;
     }
-  }, [hoveredFeedback, currentIntervalDays, cardStats.interval]);
+  }, [hoveredFeedback, currentIntervalDays, difficultyWeight, cardStats.interval]);
 
   // 현재 감쇠 곡선 패스 생성
   const currentCurvePath = useMemo(() => {
@@ -79,14 +85,13 @@ export default function FeedbackSimulation({
     const interval = cardStats.interval;
     
     for (let t = 0; t <= Math.min(cardStats.elapsedDays, maxDays); t += step) {
-      const ratio = t / interval;
-      const retention = 100 * Math.exp(-ratio / 2);
-      
+      const retention = getRetention(t, interval);
+
       const cx = paddingLeft + (t / maxDays) * chartWidth;
       const cy = paddingTop + chartHeight - ((Math.max(minRetention, retention) - minRetention) / (maxRetention - minRetention)) * chartHeight;
       points.push(`${t === 0 ? 'M' : 'L'} ${cx} ${cy}`);
     }
-    
+
     // 만약 현재 경과 시점이 maxDays보다 작다면 끝점 명시
     if (cardStats.elapsedDays < maxDays) {
       const cx = paddingLeft + (cardStats.elapsedDays / maxDays) * chartWidth;
@@ -114,9 +119,8 @@ export default function FeedbackSimulation({
 
     // 리셋 시점부터 7.5일까지 미래 시뮬레이션 곡선 생성
     for (let t = te; t <= maxDays; t += step) {
-      const simRatio = (t - te) / newInterval;
-      const simRetention = 100 * Math.exp(-simRatio / 2);
-      
+      const simRetention = getRetention(t - te, newInterval);
+
       const cx = paddingLeft + (t / maxDays) * chartWidth;
       const cy = paddingTop + chartHeight - ((Math.max(minRetention, simRetention) - minRetention) / (maxRetention - minRetention)) * chartHeight;
       points.push(`L ${cx} ${cy}`);
@@ -124,8 +128,7 @@ export default function FeedbackSimulation({
 
     // 끝점 보정
     const cx_end = paddingLeft + chartWidth;
-    const finalSimRatio = (maxDays - te) / newInterval;
-    const finalSimRetention = 100 * Math.exp(-finalSimRatio / 2);
+    const finalSimRetention = getRetention(maxDays - te, newInterval);
     const cy_end = paddingTop + chartHeight - ((Math.max(minRetention, finalSimRetention) - minRetention) / (maxRetention - minRetention)) * chartHeight;
     points.push(`L ${cx_end} ${cy_end}`);
 

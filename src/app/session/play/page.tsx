@@ -250,6 +250,7 @@ function SessionPlayContent() {
                 onReveal={handleReveal}
                 isSeparator={isSeparatorCard(currentCard)}
                 nextNotebookTitle={isSeparatorCard(currentCard) ? currentCard.nextNotebookTitle : undefined}
+                notebookTitle={!isSeparatorCard(currentCard) ? currentCard.notebookTitle : undefined}
               />
             </motion.div>
           )}
@@ -295,6 +296,7 @@ function SessionPlayContent() {
                 />
                 <FeedbackSimulation
                   currentIntervalDays={currentCard.intervalDays}
+                  difficultyWeight={currentCard.difficultyWeight}
                   lastReviewedAt={currentCard.lastReviewedAt}
                   createdAt={currentCard.createdAt}
                   hoveredFeedback={hoveredFeedback}

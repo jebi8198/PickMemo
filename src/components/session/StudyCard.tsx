@@ -12,6 +12,7 @@ interface StudyCardProps {
   onReveal: () => void;
   isSeparator?: boolean;
   nextNotebookTitle?: string;
+  notebookTitle?: string;
 }
 
 export const StudyCard: React.FC<StudyCardProps> = ({
@@ -23,6 +24,7 @@ export const StudyCard: React.FC<StudyCardProps> = ({
   onReveal,
   isSeparator = false,
   nextNotebookTitle = '',
+  notebookTitle,
 }) => {
   const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null);
   const imageLoadFailed = Boolean(imageUrl && failedImageUrl === imageUrl);
@@ -60,6 +62,9 @@ export const StudyCard: React.FC<StudyCardProps> = ({
       >
         {/* Front */}
         <div className={`${styles.face} ${styles.front}`}>
+          {notebookTitle && (
+            <div className={styles.notebookLabel}>📖 {notebookTitle}</div>
+          )}
           <div className={styles.content}>
             <h2 className={styles.topicFront}>{topic}</h2>
             <span className={styles.hint}>탭해서 뒤집기</span>
@@ -69,6 +74,9 @@ export const StudyCard: React.FC<StudyCardProps> = ({
         {/* Back */}
         <div className={`${styles.face} ${styles.back}`}>
           <div className={styles.contentBack}>
+            {notebookTitle && (
+              <div className={styles.notebookLabel}>📖 {notebookTitle}</div>
+            )}
             <h2 className={styles.topicBack}>{topic}</h2>
             <div className={styles.divider} />
             <div className={styles.description}>
