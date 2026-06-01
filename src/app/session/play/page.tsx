@@ -169,7 +169,7 @@ function SessionPlayContent() {
       <div className={styles.container}>
         <div className={styles.loadingWrapper}>
           <div className={styles.spinner} />
-          <p>바스락 제비를 섞는 중...</p>
+          <p>바스락 카드를 섞는 중...</p>
         </div>
       </div>
     );
@@ -208,7 +208,7 @@ function SessionPlayContent() {
     <div className={styles.container}>
       {/* ── 학습 헤더 ── */}
       <header className={styles.header}>
-        <Link href="/" className={styles.brandLink}>
+        <Link href="/dashboard" className={styles.brandLink}>
           <BrandLogo size={30} />
           <span>PickMemo</span>
         </Link>

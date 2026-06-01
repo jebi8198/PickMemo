@@ -227,7 +227,7 @@ export default function DashboardPage() {
           </h1>
           <p className={styles.welcomeSubtitle}>
             {reviewDueCount > 0
-              ? `오늘 복습할 제비가 ${reviewDueCount}개 준비되어 있습니다.`
+              ? `오늘 복습할 카드가 ${reviewDueCount}개 준비되어 있습니다.`
               : '오늘 복습할 카드를 모두 완료했습니다!'}
           </p>
         </div>
