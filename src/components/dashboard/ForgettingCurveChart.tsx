@@ -23,6 +23,8 @@ export interface ForgettingCurveCard {
 
 interface ForgettingCurveChartProps {
   cards: ForgettingCurveCard[];
+  mode?: string;
+  notebookOptions?: NotebookOption[];
 }
 
 interface DotPoint {
