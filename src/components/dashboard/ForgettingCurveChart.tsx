@@ -3,6 +3,12 @@
 import { useState, useMemo } from 'react';
 import styles from './ForgettingCurveChart.module.css';
 
+export interface ForgettingCurveReviewLog {
+  reviewedAt: string | Date;
+  grade?: number;
+  intervalDays?: number;
+}
+
 export interface NotebookOption {
   id: string;
   title: string;
