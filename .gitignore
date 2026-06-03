@@ -24,6 +24,9 @@
 .DS_Store
 *.pem
 
+# Syncthing 충돌 파일
+*.sync-conflict-*
+
 # debug
 npm-debug.log*
 yarn-debug.log*
