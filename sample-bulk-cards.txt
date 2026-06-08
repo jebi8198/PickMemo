@@ -1,0 +1,32 @@
+[
+  {
+    "topic": "HTTP 상태 코드 200은?",
+    "description": "요청이 성공적으로 처리되었음을 의미하는 상태 코드입니다. GET 요청 시 본문에 리소스가 함께 반환됩니다.",
+    "keywords": ["HTTP", "성공", "2xx"],
+    "imageUrl": ""
+  },
+  {
+    "topic": "REST API의 멱등성이란?",
+    "description": "같은 요청을 여러 번 보내도 결과(서버 상태)가 동일하게 유지되는 성질입니다. GET, PUT, DELETE는 멱등하지만 POST는 멱등하지 않습니다.",
+    "keywords": ["멱등성", "idempotent", "REST"],
+    "imageUrl": ""
+  },
+  {
+    "topic": "TCP와 UDP의 차이",
+    "description": "TCP는 연결 지향적이고 신뢰성(순서 보장, 재전송)을 제공합니다. UDP는 비연결형으로 빠르지만 신뢰성을 보장하지 않아 실시간 스트리밍 등에 적합합니다.",
+    "keywords": ["TCP", "UDP", "전송계층"],
+    "imageUrl": ""
+  },
+  {
+    "topic": "데이터베이스 인덱스의 목적은?",
+    "description": "테이블의 검색 속도를 높이기 위한 자료구조입니다. 조회 성능은 향상되지만 쓰기(INSERT/UPDATE/DELETE) 시 인덱스 갱신 비용과 추가 저장 공간이 발생합니다.",
+    "keywords": ["인덱스", "B-Tree", "성능"],
+    "imageUrl": ""
+  },
+  {
+    "topic": "프로세스와 스레드의 차이",
+    "description": "프로세스는 독립된 메모리 공간을 가진 실행 단위이고, 스레드는 한 프로세스 내에서 메모리(힙, 코드)를 공유하는 실행 흐름입니다. 스레드 간 통신이 더 가볍습니다.",
+    "keywords": ["프로세스", "스레드", "운영체제"],
+    "imageUrl": ""
+  }
+]
